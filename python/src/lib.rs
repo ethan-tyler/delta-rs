@@ -33,7 +33,10 @@ use deltalake::datafusion::catalog::TableProvider;
 use deltalake::datafusion::datasource::provider_as_source;
 use deltalake::datafusion::logical_expr::LogicalPlanBuilder;
 use deltalake::datafusion::prelude::SessionContext;
-use deltalake::delta_datafusion::DeltaCdfTableProvider;
+use deltalake::delta_datafusion::{
+    DeltaCdfTableProvider, DeltaScanConfig, DeltaScanNext, SnapshotWrapper,
+};
+
 use deltalake::errors::DeltaTableError;
 use deltalake::kernel::scalars::ScalarExt;
 use deltalake::kernel::transaction::{CommitBuilder, CommitProperties, TableReference};
@@ -1846,12 +1849,25 @@ impl RawDeltaTable {
         py: Python<'py>,
     ) -> PyResult<Bound<'py, PyCapsule>> {
         let name = CString::new("datafusion_table_provider").unwrap();
-        let table = self.with_table(|t| Ok(Arc::new(t.clone())))?;
+
+        let table = self.with_table(|t| Ok(t.clone()))?;
+
+        let config = DeltaScanConfig::new();
+        let snapshot_wrapped = SnapshotWrapper::EagerSnapshot(Arc::new(
+            table
+                .snapshot()
+                .map_err(PythonError::from)?
+                .snapshot()
+                .clone(),
+        ));
+        let scan =
+            Arc::new(DeltaScanNext::new(snapshot_wrapped, config).map_err(PythonError::from)?)
+                as Arc<dyn TableProvider>;
 
         let ctx = Arc::new(SessionContext::new());
         let task_ctx_provider = Arc::clone(&ctx) as Arc<dyn TaskContextProvider>;
         let ffi_task_ctx = FFI_TaskContextProvider::from(&task_ctx_provider);
-        let provider = FFI_TableProvider::new(table, false, None, ffi_task_ctx, None);
+        let provider = FFI_TableProvider::new(scan, false, None, ffi_task_ctx, None);
 
         let capsule_data = FFITableProviderCapsuleData {
             provider,
