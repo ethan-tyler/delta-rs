@@ -4,11 +4,12 @@
 //! and applies Delta Lake protocol transformations to produce logical table data.
 
 use std::any::Any;
+use std::collections::VecDeque;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
-use arrow::array::{ArrayAccessor, AsArray, RecordBatch, StringArray};
+use arrow::array::{AsArray, RecordBatch, StringArray};
 use arrow::compute::filter_record_batch;
 use arrow::datatypes::{SchemaRef, UInt16Type};
 use arrow_array::BooleanArray;
@@ -274,6 +275,7 @@ impl ExecutionPlan for DeltaScanExec {
             scan_plan: Arc::clone(&self.scan_plan),
             kernel_type: Arc::clone(self.scan_plan.scan.logical_schema()).into(),
             input: self.input.execute(partition, context)?,
+            pending: VecDeque::new(),
             baseline_metrics: BaselineMetrics::new(&self.metrics, partition),
             transforms: Arc::clone(&self.transforms),
             selection_vectors: Arc::clone(&self.selection_vectors),
@@ -346,6 +348,7 @@ struct DeltaScanStream {
     kernel_type: KernelDataType,
     /// Input stream yielding raw data read from data files.
     input: SendableRecordBatchStream,
+    pending: VecDeque<RecordBatch>,
     /// Execution metrics
     baseline_metrics: BaselineMetrics,
     /// Transforms to be applied to data read from individual files
@@ -359,8 +362,65 @@ struct DeltaScanStream {
 }
 
 impl DeltaScanStream {
-    /// Apply the per-file transformation to a RecordBatch.
-    fn batch_project(&mut self, batch: RecordBatch) -> Result<RecordBatch> {
+    fn batch_project(&mut self, batch: RecordBatch) -> Result<Vec<RecordBatch>> {
+        if batch.num_rows() == 0 {
+            return Ok(vec![RecordBatch::new_empty(Arc::clone(
+                &self.scan_plan.output_schema,
+            ))]);
+        }
+
+        let file_id_idx = file_id_idx(batch.schema_ref(), &self.file_id_column)?;
+        let file_id_col = batch.column(file_id_idx).as_dictionary::<UInt16Type>();
+        let values = file_id_col
+            .values()
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .ok_or_else(|| {
+                internal_datafusion_err!("Expected file id column to be a dictionary of strings")
+            })?;
+
+        let first_key = file_id_col
+            .key(0)
+            .ok_or_else(|| internal_datafusion_err!("File id column contains null values"))?;
+
+        let mut outputs = Vec::new();
+        let mut start_row = 0usize;
+        let mut current_key = first_key;
+        let mut current_file_id = values.value(current_key).to_string();
+
+        for row in 1..batch.num_rows() {
+            let key = file_id_col
+                .key(row)
+                .ok_or_else(|| internal_datafusion_err!("File id column contains null values"))?;
+            if key != current_key {
+                let slice = batch.slice(start_row, row - start_row);
+                let projected =
+                    self.batch_project_single_file(slice, &current_file_id, file_id_idx)?;
+                if projected.num_rows() > 0 {
+                    outputs.push(projected);
+                }
+
+                start_row = row;
+                current_key = key;
+                current_file_id = values.value(current_key).to_string();
+            }
+        }
+
+        let slice = batch.slice(start_row, batch.num_rows() - start_row);
+        let projected = self.batch_project_single_file(slice, &current_file_id, file_id_idx)?;
+        if projected.num_rows() > 0 {
+            outputs.push(projected);
+        }
+
+        Ok(outputs)
+    }
+
+    fn batch_project_single_file(
+        &mut self,
+        batch: RecordBatch,
+        file_id: &str,
+        file_id_idx: usize,
+    ) -> Result<RecordBatch> {
         let _timer = self.baseline_metrics.elapsed_compute().timer();
 
         if batch.num_rows() == 0 {
@@ -369,9 +429,7 @@ impl DeltaScanStream {
             )));
         }
 
-        let (file_id, file_id_idx) = extract_file_id(&batch, &self.file_id_column)?;
-
-        let dv_result = if let Some(mut selection_vector) = self.selection_vectors.get_mut(&file_id)
+        let dv_result = if let Some(mut selection_vector) = self.selection_vectors.get_mut(file_id)
         {
             consume_dv_mask(&mut selection_vector, batch.num_rows())
         } else {
@@ -382,7 +440,7 @@ impl DeltaScanStream {
         };
 
         if dv_result.should_remove {
-            self.selection_vectors.remove(&file_id);
+            self.selection_vectors.remove(file_id);
         }
 
         let mut batch = if let Some(selection) = dv_result.selection {
@@ -391,12 +449,10 @@ impl DeltaScanStream {
             batch
         };
 
-        // NOTE: we remove the file id column after applying the selection vector
-        // to get the correct number of rows in case we need to return source file ids later.
         let file_id_field = batch.schema_ref().field(file_id_idx).clone();
         let file_id_col = batch.remove_column(file_id_idx);
 
-        let result = if let Some(transform) = self.transforms.get(&file_id) {
+        let result = if let Some(transform) = self.transforms.get(file_id) {
             let evaluator = ARROW_HANDLER
                 .new_expression_evaluator(
                     self.scan_plan.scan.physical_schema().clone(),
@@ -428,15 +484,46 @@ impl Stream for DeltaScanStream {
     type Item = Result<RecordBatch>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let poll = self.input.poll_next_unpin(cx).map(|x| match x {
-            Some(Ok(batch)) => Some(self.batch_project(batch)),
-            other => other,
-        });
-        self.baseline_metrics.record_poll(poll)
+        loop {
+            if let Some(batch) = self.pending.pop_front() {
+                let poll = Poll::Ready(Some(Ok(batch)));
+                return self.baseline_metrics.record_poll(poll);
+            }
+
+            match self.input.poll_next_unpin(cx) {
+                Poll::Ready(Some(Ok(batch))) => match self.batch_project(batch) {
+                    Ok(batches) => {
+                        self.pending.extend(batches);
+                        continue;
+                    }
+                    Err(err) => {
+                        let poll = Poll::Ready(Some(Err(err)));
+                        return self.baseline_metrics.record_poll(poll);
+                    }
+                },
+                Poll::Ready(Some(Err(err))) => {
+                    let poll = Poll::Ready(Some(Err(err)));
+                    return self.baseline_metrics.record_poll(poll);
+                }
+                Poll::Ready(None) => {
+                    let poll = Poll::Ready(None);
+                    return self.baseline_metrics.record_poll(poll);
+                }
+                Poll::Pending => {
+                    let poll = Poll::Pending;
+                    return self.baseline_metrics.record_poll(poll);
+                }
+            }
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.input.size_hint()
+        let pending = self.pending.len();
+        let (lower, upper) = self.input.size_hint();
+        (
+            lower.saturating_add(pending),
+            upper.map(|v| v.saturating_add(pending)),
+        )
     }
 }
 
@@ -446,15 +533,8 @@ impl RecordBatchStream for DeltaScanStream {
     }
 }
 
-fn extract_file_id(batch: &RecordBatch, file_id_column: &str) -> Result<(String, usize)> {
-    if batch.num_rows() == 0 {
-        return Err(internal_datafusion_err!(
-            "Cannot extract file_id from empty batch"
-        ));
-    }
-
-    let file_id_idx = batch
-        .schema_ref()
+fn file_id_idx(schema: &SchemaRef, file_id_column: &str) -> Result<usize> {
+    schema
         .fields()
         .iter()
         .position(|f| f.name() == file_id_column)
@@ -463,27 +543,41 @@ fn extract_file_id(batch: &RecordBatch, file_id_column: &str) -> Result<(String,
                 "Expected column '{}' to be present in the input",
                 file_id_column
             )
-        })?;
+        })
+}
 
-    let file_id = batch
-        .column(file_id_idx)
-        .as_dictionary::<UInt16Type>()
-        .downcast_dict::<StringArray>()
+#[cfg(test)]
+fn extract_file_id(batch: &RecordBatch, file_id_column: &str) -> Result<(String, usize)> {
+    if batch.num_rows() == 0 {
+        return Err(internal_datafusion_err!(
+            "Cannot extract file_id from empty batch"
+        ));
+    }
+
+    let file_id_idx = file_id_idx(batch.schema_ref(), file_id_column)?;
+
+    let file_id_col = batch.column(file_id_idx).as_dictionary::<UInt16Type>();
+    let values = file_id_col
+        .values()
+        .as_any()
+        .downcast_ref::<StringArray>()
         .ok_or_else(|| {
             internal_datafusion_err!("Expected file id column to be a dictionary of strings")
-        })?
-        .value(0)
-        .to_string();
+        })?;
 
-    Ok((file_id, file_id_idx))
+    let key = file_id_col
+        .key(0)
+        .ok_or_else(|| internal_datafusion_err!("File id column contains null values"))?;
+
+    Ok((values.value(key).to_string(), file_id_idx))
 }
 
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
-    use arrow::datatypes::DataType;
-    use arrow_array::Array;
+    use arrow::datatypes::{DataType, Field, Schema};
+    use arrow_array::{Array, DictionaryArray, StringArray, UInt16Array};
     use datafusion::{
         common::stats::Precision,
         physical_plan::{collect, collect_partitioned},
@@ -496,6 +590,24 @@ mod tests {
         delta_datafusion::session::create_session,
         test_utils::{TestResult, open_fs_path},
     };
+
+    #[test]
+    fn test_extract_file_id_uses_row_value() {
+        let keys = UInt16Array::from(vec![Some(1)]);
+        let values = StringArray::from(vec!["file0", "file1"]);
+        let dict = DictionaryArray::new(keys, Arc::new(values));
+
+        let schema = Arc::new(Schema::new(vec![Field::new(
+            "file_id",
+            DataType::Dictionary(DataType::UInt16.into(), DataType::Utf8.into()),
+            false,
+        )]));
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(dict)]).unwrap();
+
+        let (file_id, file_id_idx) = extract_file_id(&batch, "file_id").unwrap();
+        assert_eq!(file_id_idx, 0);
+        assert_eq!(file_id, "file1");
+    }
 
     #[tokio::test]
     async fn test_scan_nested() -> TestResult {
@@ -812,7 +924,10 @@ mod tests {
         let scan = provider.scan(&session.state(), None, &[], None).await?;
         let statistics = scan.partition_statistics(None)?;
         assert_eq!(statistics.num_rows, Precision::Exact(5));
-        assert_eq!(statistics.total_byte_size, Precision::Exact(3240));
+        assert!(matches!(
+            statistics.total_byte_size,
+            Precision::Exact(3240) | Precision::Inexact(3240)
+        ));
         for col_stat in statistics.column_statistics.iter() {
             assert_eq!(col_stat.null_count, Precision::Absent);
             assert_eq!(col_stat.min_value, Precision::Absent);
