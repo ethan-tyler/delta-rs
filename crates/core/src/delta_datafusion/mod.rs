@@ -63,7 +63,6 @@ use crate::logstore::{LogStore, LogStoreRef};
 use crate::table::state::DeltaTableState;
 use crate::{open_table, open_table_with_storage_options};
 
-pub(crate) use self::session::session_state_from_session;
 pub use self::session::{
     DeltaParserOptions, DeltaRuntimeEnvBuilder, DeltaSessionConfig, DeltaSessionContext,
     create_session,
@@ -90,7 +89,6 @@ mod find_files;
 pub mod logical;
 pub mod physical;
 pub mod planner;
-mod schema_adapter;
 mod session;
 mod table_provider;
 
