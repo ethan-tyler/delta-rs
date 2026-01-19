@@ -557,7 +557,6 @@ mod tests {
 
     use crate::kernel::{Action, PrimitiveType, StructField, StructType};
     use crate::kernel::{DataType as DeltaDataType, ProtocolInner};
-    use crate::operations::load_cdf::*;
     use crate::writer::test_utils::datafusion::get_data;
     use crate::writer::test_utils::datafusion::write_batch;
     use crate::writer::test_utils::{
@@ -570,6 +569,7 @@ mod tests {
     use arrow::record_batch::RecordBatch;
     use arrow_schema::DataType;
     use datafusion::assert_batches_sorted_eq;
+    use datafusion::physical_plan::collect;
     use datafusion::prelude::*;
     use delta_kernel::engine::arrow_conversion::TryIntoArrow;
     use serde_json::json;
@@ -1335,13 +1335,9 @@ mod tests {
             .await
             .expect("Failed to load CDF");
 
-        let mut batches = collect_batches(
-            table.properties().output_partitioning().partition_count(),
-            table,
-            ctx,
-        )
-        .await
-        .expect("Failed to collect batches");
+        let mut batches = collect(table, ctx.task_ctx())
+            .await
+            .expect("Failed to collect batches");
 
         // The batches will contain a current _commit_timestamp which shouldn't be check_append_only
         let _: Vec<_> = batches.iter_mut().map(|b| b.remove_column(3)).collect();
@@ -1425,15 +1421,9 @@ mod tests {
             .await
             .expect("Failed to load CDF");
 
-        let mut batches = collect_batches(
-            table.properties().output_partitioning().partition_count(),
-            table,
-            ctx,
-        )
-        .await
-        .expect("Failed to collect batches");
-
-        let _ = arrow::util::pretty::print_batches(&batches);
+        let mut batches = collect(table, ctx.task_ctx())
+            .await
+            .expect("Failed to collect batches");
 
         // The batches will contain a current _commit_timestamp which shouldn't be check_append_only
         let _: Vec<_> = batches.iter_mut().map(|b| b.remove_column(4)).collect();

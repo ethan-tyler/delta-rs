@@ -20,20 +20,6 @@ if TYPE_CHECKING:
     from minio import Minio
 
 
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
-    if os.environ.get("DELTALAKE_RUN_DATAFUSION_TESTS") == "1":
-        return
-
-    skip = pytest.mark.skip(
-        reason="DataFusion Python integration tests require matching datafusion wheels; disabled by default."
-    )
-    for item in items:
-        if "datafusion" in item.keywords:
-            item.add_marker(skip)
-
-
 def wait_till_host_is_available(host: str, timeout_sec: int = 0.5):
     spacing = 2
     start = time.monotonic()
@@ -248,7 +234,7 @@ def sample_table() -> Table:
         {
             "id": Array(
                 ["1", "2", "3", "4", "5"],
-                Field("id", type=DataType.string(), nullable=True),
+                Field("id", type=DataType.string_view(), nullable=True),
             ),
             "price": Array(
                 list(range(nrows)), Field("price", type=DataType.int64(), nullable=True)

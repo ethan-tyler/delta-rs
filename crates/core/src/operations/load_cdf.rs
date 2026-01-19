@@ -13,7 +13,6 @@
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use arrow_array::RecordBatch;
 use arrow_schema::{ArrowError, Field, Schema};
 use chrono::{DateTime, Utc};
 use datafusion::catalog::Session;
@@ -26,7 +25,6 @@ use datafusion::physical_expr::{PhysicalExpr, expressions};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::projection::ProjectionExec;
 use datafusion::physical_plan::union::UnionExec;
-use datafusion::prelude::SessionContext;
 use tracing::log;
 
 use crate::DeltaTableError;
@@ -488,22 +486,6 @@ impl CdfLoadBuilder {
     }
 }
 
-#[allow(unused)]
-/// Helper function to collect batches associated with reading CDF data
-pub(crate) async fn collect_batches(
-    num_partitions: usize,
-    stream: Arc<dyn ExecutionPlan>,
-    ctx: SessionContext,
-) -> Result<Vec<RecordBatch>, Box<dyn std::error::Error>> {
-    let mut batches = vec![];
-    for p in 0..num_partitions {
-        let data: Vec<RecordBatch> =
-            crate::operations::collect_sendable_stream(stream.execute(p, ctx.task_ctx())?).await?;
-        batches.extend_from_slice(&data);
-    }
-    Ok(batches)
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -513,6 +495,7 @@ pub(crate) mod tests {
     use arrow_schema::Schema;
     use chrono::NaiveDateTime;
     use datafusion::common::assert_batches_sorted_eq;
+    use datafusion::physical_plan::collect;
     use datafusion::prelude::SessionContext;
     use delta_kernel::engine::arrow_conversion::TryIntoArrow as _;
     use itertools::Itertools;
@@ -536,12 +519,7 @@ pub(crate) mod tests {
             .build(&ctx.state(), None)
             .await?;
 
-        let batches = collect_batches(
-            table.properties().output_partitioning().partition_count(),
-            table,
-            ctx,
-        )
-        .await?;
+        let batches = collect(table, ctx.task_ctx()).await?;
         assert_batches_sorted_eq! {
             [
                 "+----+--------+------------+------------------+-----------------+-------------------------+",
@@ -591,12 +569,7 @@ pub(crate) mod tests {
             .await
             .unwrap();
 
-        let batches = collect_batches(
-            table.properties().output_partitioning().partition_count(),
-            table,
-            ctx,
-        )
-        .await?;
+        let batches = collect(table, ctx.task_ctx()).await?;
 
         assert_batches_sorted_eq! {
             [
@@ -639,12 +612,7 @@ pub(crate) mod tests {
             .build(&ctx.state(), None)
             .await?;
 
-        let batches = collect_batches(
-            table.properties().output_partitioning().partition_count(),
-            table,
-            ctx,
-        )
-        .await?;
+        let batches = collect(table, ctx.task_ctx()).await?;
 
         assert_batches_sorted_eq! {
             ["+----+--------+------------+-------------------+---------------+--------------+----------------+------------------+-----------------+-------------------------+",
@@ -740,12 +708,7 @@ pub(crate) mod tests {
             .build(&ctx.state(), None)
             .await?;
 
-        let batches = collect_batches(
-            table.properties().output_partitioning().partition_count(),
-            table.clone(),
-            ctx,
-        )
-        .await?;
+        let batches = collect(table, ctx.task_ctx()).await?;
 
         assert!(batches.is_empty());
 
@@ -790,12 +753,7 @@ pub(crate) mod tests {
             .build(&ctx.state(), None)
             .await?;
 
-        let batches = collect_batches(
-            table.properties().output_partitioning().partition_count(),
-            table.clone(),
-            ctx,
-        )
-        .await?;
+        let batches = collect(table, ctx.task_ctx()).await?;
 
         assert!(batches.is_empty());
 
@@ -838,12 +796,7 @@ pub(crate) mod tests {
             .build(&ctx.state(), None)
             .await?;
 
-        let batches = collect_batches(
-            table.properties().output_partitioning().partition_count(),
-            table,
-            ctx,
-        )
-        .await?;
+        let batches = collect(table, ctx.task_ctx()).await?;
 
         assert_batches_sorted_eq! {
             [
@@ -931,16 +884,9 @@ pub(crate) mod tests {
             .await
             .expect("Failed to load CDF");
 
-        let mut batches = collect_batches(
-            cdf_scan
-                .properties()
-                .output_partitioning()
-                .partition_count(),
-            cdf_scan,
-            ctx,
-        )
-        .await
-        .expect("Failed to collect batches");
+        let mut batches = collect(cdf_scan, ctx.task_ctx())
+            .await
+            .expect("Failed to collect batches");
 
         // The batches will contain a current _commit_timestamp which shouldn't be check_append_only
         let _: Vec<_> = batches.iter_mut().map(|b| b.remove_column(5)).collect();

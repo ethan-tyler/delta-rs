@@ -1,5 +1,3 @@
-Copyright (2020) QP Hou and a number of other contributors.  All rights reserved.
-
 
                                  Apache License
                            Version 2.0, January 2004
@@ -177,3 +175,3437 @@ Copyright (2020) QP Hou and a number of other contributors.  All rights reserved
       of your accepting any such warranty or additional liability.
 
    END OF TERMS AND CONDITIONS
+
+   APPENDIX: How to apply the Apache License to your work.
+
+      To apply the Apache License to your work, attach the following
+      boilerplate notice, with the fields enclosed by brackets "[]"
+      replaced with your own identifying information. (Don't include
+      the brackets!)  The text should be enclosed in the appropriate
+      comment syntax for the file format. We also recommend that a
+      file or class name and description of purpose be included on the
+      same "printed page" as the copyright notice for easier
+      identification within third-party archives.
+
+   Copyright [yyyy] [name of copyright owner]
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+------------------
+
+This software is built and contains the following software:
+
+(automatically generated via [cargo-license](https://crates.io/crates/cargo-license))
+
+------------------
+
+### abi_stable 0.11.3
+* source: [https://github.com/rodrimati1992/abi_stable_crates/](https://github.com/rodrimati1992/abi_stable_crates/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### abi_stable_derive 0.11.3
+* source: [https://github.com/rodrimati1992/abi_stable_crates/](https://github.com/rodrimati1992/abi_stable_crates/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### abi_stable_shared 0.11.0
+* source: [https://github.com/rodrimati1992/abi_stable_crates/](https://github.com/rodrimati1992/abi_stable_crates/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### adler2 2.0.1
+* source: [https://github.com/oyvindln/adler2](https://github.com/oyvindln/adler2)
+* license: 0BSD OR Apache-2.0 OR MIT
+
+------------------
+
+### aes 0.8.4
+* source: [https://github.com/RustCrypto/block-ciphers](https://github.com/RustCrypto/block-ciphers)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### ahash 0.8.12
+* source: [https://github.com/tkaitchuck/ahash](https://github.com/tkaitchuck/ahash)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### aho-corasick 1.1.4
+* source: [https://github.com/BurntSushi/aho-corasick](https://github.com/BurntSushi/aho-corasick)
+* license: MIT OR Unlicense
+
+------------------
+
+### alloc-no-stdlib 2.0.4
+* source: [https://github.com/dropbox/rust-alloc-no-stdlib](https://github.com/dropbox/rust-alloc-no-stdlib)
+* license: BSD-3-Clause
+
+------------------
+
+### alloc-stdlib 0.2.2
+* source: [https://github.com/dropbox/rust-alloc-no-stdlib](https://github.com/dropbox/rust-alloc-no-stdlib)
+* license: BSD-3-Clause
+
+------------------
+
+### allocator-api2 0.2.21
+* source: [https://github.com/zakarumych/allocator-api2](https://github.com/zakarumych/allocator-api2)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### android_system_properties 0.1.5
+* source: [https://github.com/nical/android_system_properties](https://github.com/nical/android_system_properties)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### anstream 0.6.21
+* source: [https://github.com/rust-cli/anstyle.git](https://github.com/rust-cli/anstyle.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### anstyle 1.0.13
+* source: [https://github.com/rust-cli/anstyle.git](https://github.com/rust-cli/anstyle.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### anstyle-parse 0.2.7
+* source: [https://github.com/rust-cli/anstyle.git](https://github.com/rust-cli/anstyle.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### anstyle-query 1.1.5
+* source: [https://github.com/rust-cli/anstyle.git](https://github.com/rust-cli/anstyle.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### anstyle-wincon 3.0.11
+* source: [https://github.com/rust-cli/anstyle.git](https://github.com/rust-cli/anstyle.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### anyhow 1.0.100
+* source: [https://github.com/dtolnay/anyhow](https://github.com/dtolnay/anyhow)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### arrayref 0.3.9
+* source: [https://github.com/droundy/arrayref](https://github.com/droundy/arrayref)
+* license: BSD-2-Clause
+
+------------------
+
+### arrayvec 0.7.6
+* source: [https://github.com/bluss/arrayvec](https://github.com/bluss/arrayvec)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### arrow 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-arith 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-array 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-buffer 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-cast 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-csv 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-data 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-ipc 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-json 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-ord 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-pyarrow 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-row 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-schema 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-select 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### arrow-string 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### as_derive_utils 0.11.0
+* source: [https://github.com/rodrimati1992/abi_stable_crates/](https://github.com/rodrimati1992/abi_stable_crates/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### async-compression 0.4.37
+* source: [https://github.com/Nullus157/async-compression](https://github.com/Nullus157/async-compression)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### async-ffi 0.5.0
+* source: [https://github.com/oxalica/async-ffi](https://github.com/oxalica/async-ffi)
+* license: MIT
+
+------------------
+
+### async-lock 3.4.2
+* source: [https://github.com/smol-rs/async-lock](https://github.com/smol-rs/async-lock)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### async-trait 0.1.89
+* source: [https://github.com/dtolnay/async-trait](https://github.com/dtolnay/async-trait)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### atoi 2.0.0
+* source: [https://github.com/pacman82/atoi-rs](https://github.com/pacman82/atoi-rs)
+* license: MIT
+
+------------------
+
+### atomic-waker 1.1.2
+* source: [https://github.com/smol-rs/atomic-waker](https://github.com/smol-rs/atomic-waker)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### aws-config 1.8.12
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-credential-types 1.2.11
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-lc-rs 1.15.2
+* source: [https://github.com/aws/aws-lc-rs](https://github.com/aws/aws-lc-rs)
+* license: (Apache-2.0 OR ISC) AND ISC
+
+------------------
+
+### aws-lc-sys 0.35.0
+* source: [https://github.com/aws/aws-lc-rs](https://github.com/aws/aws-lc-rs)
+* license: (Apache-2.0 OR ISC) AND ISC AND OpenSSL
+
+------------------
+
+### aws-runtime 1.5.17
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-sdk-dynamodb 1.101.0
+* source: [https://github.com/awslabs/aws-sdk-rust](https://github.com/awslabs/aws-sdk-rust)
+* license: Apache-2.0
+
+------------------
+
+### aws-sdk-glue 1.133.0
+* source: [https://github.com/awslabs/aws-sdk-rust](https://github.com/awslabs/aws-sdk-rust)
+* license: Apache-2.0
+
+------------------
+
+### aws-sdk-sso 1.91.0
+* source: [https://github.com/awslabs/aws-sdk-rust](https://github.com/awslabs/aws-sdk-rust)
+* license: Apache-2.0
+
+------------------
+
+### aws-sdk-ssooidc 1.93.0
+* source: [https://github.com/awslabs/aws-sdk-rust](https://github.com/awslabs/aws-sdk-rust)
+* license: Apache-2.0
+
+------------------
+
+### aws-sdk-sts 1.95.0
+* source: [https://github.com/awslabs/aws-sdk-rust](https://github.com/awslabs/aws-sdk-rust)
+* license: Apache-2.0
+
+------------------
+
+### aws-sigv4 1.3.7
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-async 1.2.7
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-http 0.62.6
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-http-client 1.1.5
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-json 0.61.9
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-observability 0.1.5
+* source: [https://github.com/awslabs/smithy-rs](https://github.com/awslabs/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-query 0.60.9
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-runtime 1.9.5
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-runtime-api 1.9.3
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-types 1.3.5
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-smithy-xml 0.60.13
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### aws-types 1.3.11
+* source: [https://github.com/smithy-lang/smithy-rs](https://github.com/smithy-lang/smithy-rs)
+* license: Apache-2.0
+
+------------------
+
+### backon 1.6.0
+* source: [https://github.com/Xuanwo/backon](https://github.com/Xuanwo/backon)
+* license: Apache-2.0
+
+------------------
+
+### base64 0.22.1
+* source: [https://github.com/marshallpierce/rust-base64](https://github.com/marshallpierce/rust-base64)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### base64-simd 0.8.0
+* source: [https://github.com/Nugine/simd](https://github.com/Nugine/simd)
+* license: MIT
+
+------------------
+
+### bigdecimal 0.4.10
+* source: [https://github.com/akubera/bigdecimal-rs](https://github.com/akubera/bigdecimal-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### bitflags 1.3.2
+* source: [https://github.com/bitflags/bitflags](https://github.com/bitflags/bitflags)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### bitflags 2.10.0
+* source: [https://github.com/bitflags/bitflags](https://github.com/bitflags/bitflags)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### blake2 0.10.6
+* source: [https://github.com/RustCrypto/hashes](https://github.com/RustCrypto/hashes)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### blake3 1.8.3
+* source: [https://github.com/BLAKE3-team/BLAKE3](https://github.com/BLAKE3-team/BLAKE3)
+* license: Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR CC0-1.0
+
+------------------
+
+### block-buffer 0.10.4
+* source: [https://github.com/RustCrypto/utils](https://github.com/RustCrypto/utils)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### block-padding 0.3.3
+* source: [https://github.com/RustCrypto/utils](https://github.com/RustCrypto/utils)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### brotli 8.0.2
+* source: [https://github.com/dropbox/rust-brotli](https://github.com/dropbox/rust-brotli)
+* license: BSD-3-Clause AND MIT
+
+------------------
+
+### brotli-decompressor 5.0.0
+* source: [https://github.com/dropbox/rust-brotli-decompressor](https://github.com/dropbox/rust-brotli-decompressor)
+* license: BSD-3-Clause OR MIT
+
+------------------
+
+### bumpalo 3.19.1
+* source: [https://github.com/fitzgen/bumpalo](https://github.com/fitzgen/bumpalo)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### bytemuck 1.24.0
+* source: [https://github.com/Lokathor/bytemuck](https://github.com/Lokathor/bytemuck)
+* license: Apache-2.0 OR MIT OR Zlib
+
+------------------
+
+### byteorder 1.5.0
+* source: [https://github.com/BurntSushi/byteorder](https://github.com/BurntSushi/byteorder)
+* license: MIT OR Unlicense
+
+------------------
+
+### bytes 1.11.0
+* source: [https://github.com/tokio-rs/bytes](https://github.com/tokio-rs/bytes)
+* license: MIT
+
+------------------
+
+### bytes-utils 0.1.4
+* source: [https://github.com/vorner/bytes-utils](https://github.com/vorner/bytes-utils)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### bzip2 0.6.1
+* source: [https://github.com/trifectatechfoundation/bzip2-rs](https://github.com/trifectatechfoundation/bzip2-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### cbc 0.1.2
+* source: [https://github.com/RustCrypto/block-modes](https://github.com/RustCrypto/block-modes)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### cfg-if 1.0.4
+* source: [https://github.com/rust-lang/cfg-if](https://github.com/rust-lang/cfg-if)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### chrono 0.4.42
+* source: [https://github.com/chronotope/chrono](https://github.com/chronotope/chrono)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### chrono-tz 0.10.4
+* source: [https://github.com/chronotope/chrono-tz](https://github.com/chronotope/chrono-tz)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### cipher 0.4.4
+* source: [https://github.com/RustCrypto/traits](https://github.com/RustCrypto/traits)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### clap 4.5.54
+* source: [https://github.com/clap-rs/clap](https://github.com/clap-rs/clap)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### clap_builder 4.5.54
+* source: [https://github.com/clap-rs/clap](https://github.com/clap-rs/clap)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### clap_derive 4.5.49
+* source: [https://github.com/clap-rs/clap](https://github.com/clap-rs/clap)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### clap_lex 0.7.6
+* source: [https://github.com/clap-rs/clap](https://github.com/clap-rs/clap)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### colorchoice 1.0.4
+* source: [https://github.com/rust-cli/anstyle.git](https://github.com/rust-cli/anstyle.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### comfy-table 7.1.2
+* source: [https://github.com/nukesor/comfy-table](https://github.com/nukesor/comfy-table)
+* license: MIT
+
+------------------
+
+### compression-codecs 0.4.36
+* source: [https://github.com/Nullus157/async-compression](https://github.com/Nullus157/async-compression)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### compression-core 0.4.31
+* source: [https://github.com/Nullus157/async-compression](https://github.com/Nullus157/async-compression)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### concurrent-queue 2.5.0
+* source: [https://github.com/smol-rs/concurrent-queue](https://github.com/smol-rs/concurrent-queue)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### const-random 0.1.18
+* source: [https://github.com/tkaitchuck/constrandom](https://github.com/tkaitchuck/constrandom)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### const-random-macro 0.1.16
+* source: [https://github.com/tkaitchuck/constrandom](https://github.com/tkaitchuck/constrandom)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### const_panic 0.2.15
+* source: [https://github.com/rodrimati1992/const_panic/](https://github.com/rodrimati1992/const_panic/)
+* license: Zlib
+
+------------------
+
+### constant_time_eq 0.4.2
+* source: [https://github.com/cesarb/constant_time_eq](https://github.com/cesarb/constant_time_eq)
+* license: Apache-2.0 OR CC0-1.0 OR MIT-0
+
+------------------
+
+### convert_case 0.9.0
+* source: [https://github.com/rutrum/convert-case](https://github.com/rutrum/convert-case)
+* license: MIT
+
+------------------
+
+### core-foundation 0.10.1
+* source: [https://github.com/servo/core-foundation-rs](https://github.com/servo/core-foundation-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### core-foundation-sys 0.8.7
+* source: [https://github.com/servo/core-foundation-rs](https://github.com/servo/core-foundation-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### core_extensions 1.5.4
+* source: [https://github.com/rodrimati1992/core_extensions](https://github.com/rodrimati1992/core_extensions)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### core_extensions_proc_macros 1.5.4
+* source: [https://github.com/rodrimati1992/core_extensions](https://github.com/rodrimati1992/core_extensions)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### cpufeatures 0.2.17
+* source: [https://github.com/RustCrypto/utils](https://github.com/RustCrypto/utils)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### crc 3.4.0
+* source: [https://github.com/mrhooray/crc-rs.git](https://github.com/mrhooray/crc-rs.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### crc-catalog 2.4.0
+* source: [https://github.com/akhilles/crc-catalog.git](https://github.com/akhilles/crc-catalog.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### crc32fast 1.5.0
+* source: [https://github.com/srijs/rust-crc32fast](https://github.com/srijs/rust-crc32fast)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### crossbeam-channel 0.5.15
+* source: [https://github.com/crossbeam-rs/crossbeam](https://github.com/crossbeam-rs/crossbeam)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### crossbeam-epoch 0.9.18
+* source: [https://github.com/crossbeam-rs/crossbeam](https://github.com/crossbeam-rs/crossbeam)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### crossbeam-utils 0.8.21
+* source: [https://github.com/crossbeam-rs/crossbeam](https://github.com/crossbeam-rs/crossbeam)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### crossterm 0.27.0
+* source: [https://github.com/crossterm-rs/crossterm](https://github.com/crossterm-rs/crossterm)
+* license: MIT
+
+------------------
+
+### crossterm 0.28.1
+* source: [https://github.com/crossterm-rs/crossterm](https://github.com/crossterm-rs/crossterm)
+* license: MIT
+
+------------------
+
+### crossterm_winapi 0.9.1
+* source: [https://github.com/crossterm-rs/crossterm-winapi](https://github.com/crossterm-rs/crossterm-winapi)
+* license: MIT
+
+------------------
+
+### crunchy 0.2.4
+* source: [https://github.com/eira-fransham/crunchy](https://github.com/eira-fransham/crunchy)
+* license: MIT
+
+------------------
+
+### crypto-common 0.1.7
+* source: [https://github.com/RustCrypto/traits](https://github.com/RustCrypto/traits)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### csv 1.4.0
+* source: [https://github.com/BurntSushi/rust-csv](https://github.com/BurntSushi/rust-csv)
+* license: MIT OR Unlicense
+
+------------------
+
+### csv-core 0.1.13
+* source: [https://github.com/BurntSushi/rust-csv](https://github.com/BurntSushi/rust-csv)
+* license: MIT OR Unlicense
+
+------------------
+
+### ctor 0.6.3
+* source: [https://github.com/mmastrac/rust-ctor](https://github.com/mmastrac/rust-ctor)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### ctor-proc-macro 0.0.7
+* source: [https://github.com/mmastrac/rust-ctor](https://github.com/mmastrac/rust-ctor)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### ctr 0.9.2
+* source: [https://github.com/RustCrypto/block-modes](https://github.com/RustCrypto/block-modes)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### darling 0.20.11
+* source: [https://github.com/TedDriggs/darling](https://github.com/TedDriggs/darling)
+* license: MIT
+
+------------------
+
+### darling_core 0.20.11
+* source: [https://github.com/TedDriggs/darling](https://github.com/TedDriggs/darling)
+* license: MIT
+
+------------------
+
+### darling_macro 0.20.11
+* source: [https://github.com/TedDriggs/darling](https://github.com/TedDriggs/darling)
+* license: MIT
+
+------------------
+
+### dashmap 6.1.0
+* source: [https://github.com/xacrimon/dashmap](https://github.com/xacrimon/dashmap)
+* license: MIT
+
+------------------
+
+### datafusion 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-catalog 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-catalog-listing 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-common 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-common-runtime 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-datasource 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-datasource-arrow 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-datasource-csv 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-datasource-json 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-datasource-parquet 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-doc 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-execution 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-expr 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-expr-common 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-ffi 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-functions 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-functions-aggregate 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-functions-aggregate-common 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-functions-nested 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-functions-table 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-functions-window 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-functions-window-common 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-macros 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-optimizer 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-physical-expr 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-physical-expr-adapter 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-physical-expr-common 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-physical-optimizer 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-physical-plan 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-proto 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-proto-common 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-pruning 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-session 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### datafusion-sql 52.0.0
+* source: [https://github.com/apache/datafusion](https://github.com/apache/datafusion)
+* license: Apache-2.0
+
+------------------
+
+### delta-benchmarks 0.0.1
+* source: [None](None)
+* license: Apache-2.0
+
+------------------
+
+### delta_kernel 0.19.0
+* source: [https://github.com/delta-io/delta-kernel-rs](https://github.com/delta-io/delta-kernel-rs)
+* license: Apache-2.0
+
+------------------
+
+### delta_kernel_derive 0.19.0
+* source: [https://github.com/delta-io/delta-kernel-rs](https://github.com/delta-io/delta-kernel-rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake 0.30.1
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-aws 0.13.0
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-azure 0.13.0
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-catalog-glue 0.14.0
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-catalog-unity 0.14.1
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-core 0.30.1
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-derive 0.30.0
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-gcp 0.14.0
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-hdfs 0.14.0
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-lakefs 0.13.0
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-mount 0.14.0
+* source: [https://github.com/delta-io/delta.rs](https://github.com/delta-io/delta.rs)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-python 1.3.2
+* source: [None](None)
+* license: Apache-2.0
+
+------------------
+
+### deltalake-test 0.13.0
+* source: [None](None)
+* license: None
+
+------------------
+
+### deranged 0.5.5
+* source: [https://github.com/jhpratt/deranged](https://github.com/jhpratt/deranged)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### des 0.8.1
+* source: [https://github.com/RustCrypto/block-ciphers](https://github.com/RustCrypto/block-ciphers)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### diff 0.1.13
+* source: [https://github.com/utkarshkukreti/diff.rs](https://github.com/utkarshkukreti/diff.rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### digest 0.10.7
+* source: [https://github.com/RustCrypto/traits](https://github.com/RustCrypto/traits)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### dirs 6.0.0
+* source: [https://github.com/soc/dirs-rs](https://github.com/soc/dirs-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### dirs-sys 0.5.0
+* source: [https://github.com/dirs-dev/dirs-sys-rs](https://github.com/dirs-dev/dirs-sys-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### displaydoc 0.2.5
+* source: [https://github.com/yaahc/displaydoc](https://github.com/yaahc/displaydoc)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### dns-lookup 2.1.1
+* source: [https://github.com/keeperofdakeys/dns-lookup/](https://github.com/keeperofdakeys/dns-lookup/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### dotenvy 0.15.7
+* source: [https://github.com/allan2/dotenvy](https://github.com/allan2/dotenvy)
+* license: MIT
+
+------------------
+
+### dtor 0.1.1
+* source: [https://github.com/mmastrac/rust-ctor](https://github.com/mmastrac/rust-ctor)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### dtor-proc-macro 0.0.6
+* source: [https://github.com/mmastrac/rust-ctor](https://github.com/mmastrac/rust-ctor)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### either 1.15.0
+* source: [https://github.com/rayon-rs/either](https://github.com/rayon-rs/either)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### env_logger 0.10.2
+* source: [https://github.com/rust-cli/env_logger](https://github.com/rust-cli/env_logger)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### equivalent 1.0.2
+* source: [https://github.com/indexmap-rs/equivalent](https://github.com/indexmap-rs/equivalent)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### errno 0.3.14
+* source: [https://github.com/lambda-fairy/rust-errno](https://github.com/lambda-fairy/rust-errno)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### event-listener 5.4.1
+* source: [https://github.com/smol-rs/event-listener](https://github.com/smol-rs/event-listener)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### event-listener-strategy 0.5.4
+* source: [https://github.com/smol-rs/event-listener-strategy](https://github.com/smol-rs/event-listener-strategy)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### fastrand 2.3.0
+* source: [https://github.com/smol-rs/fastrand](https://github.com/smol-rs/fastrand)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### fixedbitset 0.5.7
+* source: [https://github.com/petgraph/fixedbitset](https://github.com/petgraph/fixedbitset)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### flatbuffers 25.12.19
+* source: [https://github.com/google/flatbuffers](https://github.com/google/flatbuffers)
+* license: Apache-2.0
+
+------------------
+
+### flate2 1.1.5
+* source: [https://github.com/rust-lang/flate2-rs](https://github.com/rust-lang/flate2-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### fnv 1.0.7
+* source: [https://github.com/servo/rust-fnv](https://github.com/servo/rust-fnv)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### foldhash 0.1.5
+* source: [https://github.com/orlp/foldhash](https://github.com/orlp/foldhash)
+* license: Zlib
+
+------------------
+
+### foldhash 0.2.0
+* source: [https://github.com/orlp/foldhash](https://github.com/orlp/foldhash)
+* license: Zlib
+
+------------------
+
+### form_urlencoded 1.2.2
+* source: [https://github.com/servo/rust-url](https://github.com/servo/rust-url)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### fs_extra 1.3.0
+* source: [https://github.com/webdesus/fs_extra](https://github.com/webdesus/fs_extra)
+* license: MIT
+
+------------------
+
+### futures 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### futures-channel 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### futures-core 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### futures-executor 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### futures-io 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### futures-macro 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### futures-sink 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### futures-task 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### futures-util 0.3.31
+* source: [https://github.com/rust-lang/futures-rs](https://github.com/rust-lang/futures-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### g2gen 1.2.2
+* source: [https://github.com/WanzenBug/g2p](https://github.com/WanzenBug/g2p)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### g2p 1.2.2
+* source: [https://github.com/WanzenBug/g2p](https://github.com/WanzenBug/g2p)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### g2poly 1.2.2
+* source: [https://github.com/WanzenBug/g2p](https://github.com/WanzenBug/g2p)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### generational-arena 0.2.9
+* source: [https://github.com/fitzgen/generational-arena](https://github.com/fitzgen/generational-arena)
+* license: MPL-2.0
+
+------------------
+
+### generic-array 0.14.7
+* source: [https://github.com/fizyk20/generic-array.git](https://github.com/fizyk20/generic-array.git)
+* license: MIT
+
+------------------
+
+### getrandom 0.2.16
+* source: [https://github.com/rust-random/getrandom](https://github.com/rust-random/getrandom)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### getrandom 0.3.4
+* source: [https://github.com/rust-random/getrandom](https://github.com/rust-random/getrandom)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### glob 0.3.3
+* source: [https://github.com/rust-lang/glob](https://github.com/rust-lang/glob)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### h2 0.3.27
+* source: [https://github.com/hyperium/h2](https://github.com/hyperium/h2)
+* license: MIT
+
+------------------
+
+### h2 0.4.13
+* source: [https://github.com/hyperium/h2](https://github.com/hyperium/h2)
+* license: MIT
+
+------------------
+
+### half 2.7.1
+* source: [https://github.com/VoidStarKat/half-rs](https://github.com/VoidStarKat/half-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### hashbrown 0.14.5
+* source: [https://github.com/rust-lang/hashbrown](https://github.com/rust-lang/hashbrown)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### hashbrown 0.15.5
+* source: [https://github.com/rust-lang/hashbrown](https://github.com/rust-lang/hashbrown)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### hashbrown 0.16.1
+* source: [https://github.com/rust-lang/hashbrown](https://github.com/rust-lang/hashbrown)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### hdfs-native 0.12.4
+* source: [https://github.com/Kimahriman/hdfs-native](https://github.com/Kimahriman/hdfs-native)
+* license: Apache-2.0
+
+------------------
+
+### hdfs-native-object-store 0.15.0
+* source: [https://github.com/datafusion-contrib/hdfs-native-object-store](https://github.com/datafusion-contrib/hdfs-native-object-store)
+* license: Apache-2.0
+
+------------------
+
+### heck 0.5.0
+* source: [https://github.com/withoutboats/heck](https://github.com/withoutboats/heck)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### hermit-abi 0.5.2
+* source: [https://github.com/hermit-os/hermit-rs](https://github.com/hermit-os/hermit-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### hex 0.4.3
+* source: [https://github.com/KokaKiwi/rust-hex](https://github.com/KokaKiwi/rust-hex)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### hmac 0.12.1
+* source: [https://github.com/RustCrypto/MACs](https://github.com/RustCrypto/MACs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### http 0.2.12
+* source: [https://github.com/hyperium/http](https://github.com/hyperium/http)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### http 1.4.0
+* source: [https://github.com/hyperium/http](https://github.com/hyperium/http)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### http-body 0.4.6
+* source: [https://github.com/hyperium/http-body](https://github.com/hyperium/http-body)
+* license: MIT
+
+------------------
+
+### http-body 1.0.1
+* source: [https://github.com/hyperium/http-body](https://github.com/hyperium/http-body)
+* license: MIT
+
+------------------
+
+### http-body-util 0.1.3
+* source: [https://github.com/hyperium/http-body](https://github.com/hyperium/http-body)
+* license: MIT
+
+------------------
+
+### httparse 1.10.1
+* source: [https://github.com/seanmonstar/httparse](https://github.com/seanmonstar/httparse)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### httpdate 1.0.3
+* source: [https://github.com/pyfisch/httpdate](https://github.com/pyfisch/httpdate)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### humantime 2.3.0
+* source: [https://github.com/chronotope/humantime](https://github.com/chronotope/humantime)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### hyper 0.14.32
+* source: [https://github.com/hyperium/hyper](https://github.com/hyperium/hyper)
+* license: MIT
+
+------------------
+
+### hyper 1.8.1
+* source: [https://github.com/hyperium/hyper](https://github.com/hyperium/hyper)
+* license: MIT
+
+------------------
+
+### hyper-rustls 0.24.2
+* source: [https://github.com/rustls/hyper-rustls](https://github.com/rustls/hyper-rustls)
+* license: Apache-2.0 OR ISC OR MIT
+
+------------------
+
+### hyper-rustls 0.27.7
+* source: [https://github.com/rustls/hyper-rustls](https://github.com/rustls/hyper-rustls)
+* license: Apache-2.0 OR ISC OR MIT
+
+------------------
+
+### hyper-util 0.1.19
+* source: [https://github.com/hyperium/hyper-util](https://github.com/hyperium/hyper-util)
+* license: MIT
+
+------------------
+
+### iana-time-zone 0.1.64
+* source: [https://github.com/strawlab/iana-time-zone](https://github.com/strawlab/iana-time-zone)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### iana-time-zone-haiku 0.1.2
+* source: [https://github.com/strawlab/iana-time-zone](https://github.com/strawlab/iana-time-zone)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### icu_collections 2.1.1
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### icu_locale_core 2.1.1
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### icu_normalizer 2.1.1
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### icu_normalizer_data 2.1.1
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### icu_properties 2.1.2
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### icu_properties_data 2.1.2
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### icu_provider 2.1.1
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### ident_case 1.0.1
+* source: [https://github.com/TedDriggs/ident_case](https://github.com/TedDriggs/ident_case)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### idna 1.1.0
+* source: [https://github.com/servo/rust-url/](https://github.com/servo/rust-url/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### idna_adapter 1.2.1
+* source: [https://github.com/hsivonen/idna_adapter](https://github.com/hsivonen/idna_adapter)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### indexmap 2.13.0
+* source: [https://github.com/indexmap-rs/indexmap](https://github.com/indexmap-rs/indexmap)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### indoc 2.0.7
+* source: [https://github.com/dtolnay/indoc](https://github.com/dtolnay/indoc)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### inout 0.1.4
+* source: [https://github.com/RustCrypto/utils](https://github.com/RustCrypto/utils)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### instant 0.1.13
+* source: [https://github.com/sebcrozet/instant](https://github.com/sebcrozet/instant)
+* license: BSD-3-Clause
+
+------------------
+
+### integer-encoding 3.0.4
+* source: [https://github.com/dermesser/integer-encoding-rs](https://github.com/dermesser/integer-encoding-rs)
+* license: MIT
+
+------------------
+
+### ipnet 2.11.0
+* source: [https://github.com/krisprice/ipnet](https://github.com/krisprice/ipnet)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### iri-string 0.7.10
+* source: [https://github.com/lo48576/iri-string](https://github.com/lo48576/iri-string)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### is-terminal 0.4.17
+* source: [https://github.com/sunfishcode/is-terminal](https://github.com/sunfishcode/is-terminal)
+* license: MIT
+
+------------------
+
+### is_terminal_polyfill 1.70.2
+* source: [https://github.com/polyfill-rs/is_terminal_polyfill](https://github.com/polyfill-rs/is_terminal_polyfill)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### itertools 0.10.5
+* source: [https://github.com/rust-itertools/itertools](https://github.com/rust-itertools/itertools)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### itertools 0.14.0
+* source: [https://github.com/rust-itertools/itertools](https://github.com/rust-itertools/itertools)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### itoa 1.0.17
+* source: [https://github.com/dtolnay/itoa](https://github.com/dtolnay/itoa)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### jemalloc-sys 0.5.4+5.3.0-patched
+* source: [https://github.com/tikv/jemallocator](https://github.com/tikv/jemallocator)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### jemallocator 0.5.4
+* source: [https://github.com/tikv/jemallocator](https://github.com/tikv/jemallocator)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### js-sys 0.3.83
+* source: [https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### lazy_static 1.5.0
+* source: [https://github.com/rust-lang-nursery/lazy-static.rs](https://github.com/rust-lang-nursery/lazy-static.rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### lexical-core 1.0.6
+* source: [https://github.com/Alexhuszagh/rust-lexical](https://github.com/Alexhuszagh/rust-lexical)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### lexical-parse-float 1.0.6
+* source: [https://github.com/Alexhuszagh/rust-lexical](https://github.com/Alexhuszagh/rust-lexical)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### lexical-parse-integer 1.0.6
+* source: [https://github.com/Alexhuszagh/rust-lexical](https://github.com/Alexhuszagh/rust-lexical)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### lexical-util 1.0.7
+* source: [https://github.com/Alexhuszagh/rust-lexical](https://github.com/Alexhuszagh/rust-lexical)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### lexical-write-float 1.0.6
+* source: [https://github.com/Alexhuszagh/rust-lexical](https://github.com/Alexhuszagh/rust-lexical)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### lexical-write-integer 1.0.6
+* source: [https://github.com/Alexhuszagh/rust-lexical](https://github.com/Alexhuszagh/rust-lexical)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### libbz2-rs-sys 0.2.2
+* source: [https://github.com/trifectatechfoundation/libbzip2-rs](https://github.com/trifectatechfoundation/libbzip2-rs)
+* license: bzip2-1.0.6
+
+------------------
+
+### libc 0.2.180
+* source: [https://github.com/rust-lang/libc](https://github.com/rust-lang/libc)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### libloading 0.7.4
+* source: [https://github.com/nagisa/rust_libloading/](https://github.com/nagisa/rust_libloading/)
+* license: ISC
+
+------------------
+
+### libloading 0.8.9
+* source: [https://github.com/nagisa/rust_libloading/](https://github.com/nagisa/rust_libloading/)
+* license: ISC
+
+------------------
+
+### liblzma 0.4.5
+* source: [https://github.com/portable-network-archive/liblzma-rs](https://github.com/portable-network-archive/liblzma-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### liblzma-sys 0.4.4
+* source: [https://github.com/portable-network-archive/liblzma-rs](https://github.com/portable-network-archive/liblzma-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### libm 0.2.15
+* source: [https://github.com/rust-lang/compiler-builtins](https://github.com/rust-lang/compiler-builtins)
+* license: MIT
+
+------------------
+
+### libmimalloc-sys 0.1.44
+* source: [https://github.com/purpleprotocol/mimalloc_rust/tree/master/libmimalloc-sys](https://github.com/purpleprotocol/mimalloc_rust/tree/master/libmimalloc-sys)
+* license: MIT
+
+------------------
+
+### libredox 0.1.12
+* source: [https://gitlab.redox-os.org/redox-os/libredox.git](https://gitlab.redox-os.org/redox-os/libredox.git)
+* license: MIT
+
+------------------
+
+### libz-rs-sys 0.5.5
+* source: [https://github.com/trifectatechfoundation/zlib-rs](https://github.com/trifectatechfoundation/zlib-rs)
+* license: Zlib
+
+------------------
+
+### linux-raw-sys 0.4.15
+* source: [https://github.com/sunfishcode/linux-raw-sys](https://github.com/sunfishcode/linux-raw-sys)
+* license: Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+
+------------------
+
+### linux-raw-sys 0.11.0
+* source: [https://github.com/sunfishcode/linux-raw-sys](https://github.com/sunfishcode/linux-raw-sys)
+* license: Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+
+------------------
+
+### litemap 0.8.1
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### lock_api 0.4.14
+* source: [https://github.com/Amanieu/parking_lot](https://github.com/Amanieu/parking_lot)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### log 0.4.29
+* source: [https://github.com/rust-lang/log](https://github.com/rust-lang/log)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### lru-slab 0.1.2
+* source: [https://github.com/Ralith/lru-slab](https://github.com/Ralith/lru-slab)
+* license: Apache-2.0 OR MIT OR Zlib
+
+------------------
+
+### lz4_flex 0.12.0
+* source: [https://github.com/pseitz/lz4_flex](https://github.com/pseitz/lz4_flex)
+* license: MIT
+
+------------------
+
+### matchers 0.2.0
+* source: [https://github.com/hawkw/matchers](https://github.com/hawkw/matchers)
+* license: MIT
+
+------------------
+
+### matrixmultiply 0.3.10
+* source: [https://github.com/bluss/matrixmultiply/](https://github.com/bluss/matrixmultiply/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### md-5 0.10.6
+* source: [https://github.com/RustCrypto/hashes](https://github.com/RustCrypto/hashes)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### memchr 2.7.6
+* source: [https://github.com/BurntSushi/memchr](https://github.com/BurntSushi/memchr)
+* license: MIT OR Unlicense
+
+------------------
+
+### memoffset 0.9.1
+* source: [https://github.com/Gilnaa/memoffset](https://github.com/Gilnaa/memoffset)
+* license: MIT
+
+------------------
+
+### mimalloc 0.1.48
+* source: [https://github.com/purpleprotocol/mimalloc_rust](https://github.com/purpleprotocol/mimalloc_rust)
+* license: MIT
+
+------------------
+
+### miniz_oxide 0.8.9
+* source: [https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide)
+* license: Apache-2.0 OR MIT OR Zlib
+
+------------------
+
+### mio 1.1.1
+* source: [https://github.com/tokio-rs/mio](https://github.com/tokio-rs/mio)
+* license: MIT
+
+------------------
+
+### moka 0.12.12
+* source: [https://github.com/moka-rs/moka](https://github.com/moka-rs/moka)
+* license: (Apache-2.0 OR MIT) AND Apache-2.0
+
+------------------
+
+### ndarray 0.16.1
+* source: [https://github.com/rust-ndarray/ndarray](https://github.com/rust-ndarray/ndarray)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### nu-ansi-term 0.50.3
+* source: [https://github.com/nushell/nu-ansi-term](https://github.com/nushell/nu-ansi-term)
+* license: MIT
+
+------------------
+
+### num-bigint 0.4.6
+* source: [https://github.com/rust-num/num-bigint](https://github.com/rust-num/num-bigint)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### num-complex 0.4.6
+* source: [https://github.com/rust-num/num-complex](https://github.com/rust-num/num-complex)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### num-conv 0.1.0
+* source: [https://github.com/jhpratt/num-conv](https://github.com/jhpratt/num-conv)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### num-integer 0.1.46
+* source: [https://github.com/rust-num/num-integer](https://github.com/rust-num/num-integer)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### num-traits 0.2.19
+* source: [https://github.com/rust-num/num-traits](https://github.com/rust-num/num-traits)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### num_cpus 1.17.0
+* source: [https://github.com/seanmonstar/num_cpus](https://github.com/seanmonstar/num_cpus)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### numpy 0.26.0
+* source: [https://github.com/PyO3/rust-numpy](https://github.com/PyO3/rust-numpy)
+* license: BSD-2-Clause
+
+------------------
+
+### object_store 0.12.4
+* source: [https://github.com/apache/arrow-rs-object-store](https://github.com/apache/arrow-rs-object-store)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### once_cell 1.21.3
+* source: [https://github.com/matklad/once_cell](https://github.com/matklad/once_cell)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### once_cell_polyfill 1.70.2
+* source: [https://github.com/polyfill-rs/once_cell_polyfill](https://github.com/polyfill-rs/once_cell_polyfill)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### openssl-probe 0.2.0
+* source: [https://github.com/alexcrichton/openssl-probe](https://github.com/alexcrichton/openssl-probe)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### opentelemetry 0.31.0
+* source: [https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry](https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry)
+* license: Apache-2.0
+
+------------------
+
+### opentelemetry-http 0.31.0
+* source: [https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-http](https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-http)
+* license: Apache-2.0
+
+------------------
+
+### opentelemetry-otlp 0.31.0
+* source: [https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-otlp](https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-otlp)
+* license: Apache-2.0
+
+------------------
+
+### opentelemetry-proto 0.31.0
+* source: [https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-proto](https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-proto)
+* license: Apache-2.0
+
+------------------
+
+### opentelemetry_sdk 0.31.0
+* source: [https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-sdk](https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-sdk)
+* license: Apache-2.0
+
+------------------
+
+### option-ext 0.2.0
+* source: [https://github.com/soc/option-ext.git](https://github.com/soc/option-ext.git)
+* license: MPL-2.0
+
+------------------
+
+### ordered-float 2.10.1
+* source: [https://github.com/reem/rust-ordered-float](https://github.com/reem/rust-ordered-float)
+* license: MIT
+
+------------------
+
+### outref 0.5.2
+* source: [https://github.com/Nugine/outref](https://github.com/Nugine/outref)
+* license: MIT
+
+------------------
+
+### parking 2.2.1
+* source: [https://github.com/smol-rs/parking](https://github.com/smol-rs/parking)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### parking_lot 0.11.2
+* source: [https://github.com/Amanieu/parking_lot](https://github.com/Amanieu/parking_lot)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### parking_lot 0.12.5
+* source: [https://github.com/Amanieu/parking_lot](https://github.com/Amanieu/parking_lot)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### parking_lot_core 0.8.6
+* source: [https://github.com/Amanieu/parking_lot](https://github.com/Amanieu/parking_lot)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### parking_lot_core 0.9.12
+* source: [https://github.com/Amanieu/parking_lot](https://github.com/Amanieu/parking_lot)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### parquet 57.1.0
+* source: [https://github.com/apache/arrow-rs](https://github.com/apache/arrow-rs)
+* license: Apache-2.0
+
+------------------
+
+### paste 1.0.15
+* source: [https://github.com/dtolnay/paste](https://github.com/dtolnay/paste)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### percent-encoding 2.3.2
+* source: [https://github.com/servo/rust-url/](https://github.com/servo/rust-url/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### percent-encoding-rfc3986 0.1.3
+* source: [https://github.com/Kixunil/percent-encoding-rfc3986/](https://github.com/Kixunil/percent-encoding-rfc3986/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### petgraph 0.8.3
+* source: [https://github.com/petgraph/petgraph](https://github.com/petgraph/petgraph)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### phf 0.12.1
+* source: [https://github.com/rust-phf/rust-phf](https://github.com/rust-phf/rust-phf)
+* license: MIT
+
+------------------
+
+### phf_shared 0.12.1
+* source: [https://github.com/rust-phf/rust-phf](https://github.com/rust-phf/rust-phf)
+* license: MIT
+
+------------------
+
+### pin-project 1.1.10
+* source: [https://github.com/taiki-e/pin-project](https://github.com/taiki-e/pin-project)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pin-project-internal 1.1.10
+* source: [https://github.com/taiki-e/pin-project](https://github.com/taiki-e/pin-project)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pin-project-lite 0.2.16
+* source: [https://github.com/taiki-e/pin-project-lite](https://github.com/taiki-e/pin-project-lite)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pin-utils 0.1.0
+* source: [https://github.com/rust-lang-nursery/pin-utils](https://github.com/rust-lang-nursery/pin-utils)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### portable-atomic 1.13.0
+* source: [https://github.com/taiki-e/portable-atomic](https://github.com/taiki-e/portable-atomic)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### portable-atomic-util 0.2.4
+* source: [https://github.com/taiki-e/portable-atomic](https://github.com/taiki-e/portable-atomic)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### potential_utf 0.1.4
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### powerfmt 0.2.0
+* source: [https://github.com/jhpratt/powerfmt](https://github.com/jhpratt/powerfmt)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### ppv-lite86 0.2.21
+* source: [https://github.com/cryptocorrosion/cryptocorrosion](https://github.com/cryptocorrosion/cryptocorrosion)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pretty_assertions 1.4.1
+* source: [https://github.com/rust-pretty-assertions/rust-pretty-assertions](https://github.com/rust-pretty-assertions/rust-pretty-assertions)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### proc-macro-error-attr2 2.0.0
+* source: [https://github.com/GnomedDev/proc-macro-error-2](https://github.com/GnomedDev/proc-macro-error-2)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### proc-macro-error2 2.0.1
+* source: [https://github.com/GnomedDev/proc-macro-error-2](https://github.com/GnomedDev/proc-macro-error-2)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### proc-macro2 1.0.105
+* source: [https://github.com/dtolnay/proc-macro2](https://github.com/dtolnay/proc-macro2)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### prost 0.14.1
+* source: [https://github.com/tokio-rs/prost](https://github.com/tokio-rs/prost)
+* license: Apache-2.0
+
+------------------
+
+### prost-derive 0.14.1
+* source: [https://github.com/tokio-rs/prost](https://github.com/tokio-rs/prost)
+* license: Apache-2.0
+
+------------------
+
+### prost-types 0.14.1
+* source: [https://github.com/tokio-rs/prost](https://github.com/tokio-rs/prost)
+* license: Apache-2.0
+
+------------------
+
+### psm 0.1.28
+* source: [https://github.com/rust-lang/stacker/](https://github.com/rust-lang/stacker/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pyo3 0.26.0
+* source: [https://github.com/pyo3/pyo3](https://github.com/pyo3/pyo3)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pyo3-arrow 0.14.0
+* source: [https://github.com/kylebarron/arro3](https://github.com/kylebarron/arro3)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pyo3-build-config 0.26.0
+* source: [https://github.com/pyo3/pyo3](https://github.com/pyo3/pyo3)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pyo3-ffi 0.26.0
+* source: [https://github.com/pyo3/pyo3](https://github.com/pyo3/pyo3)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pyo3-macros 0.26.0
+* source: [https://github.com/pyo3/pyo3](https://github.com/pyo3/pyo3)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### pyo3-macros-backend 0.26.0
+* source: [https://github.com/pyo3/pyo3](https://github.com/pyo3/pyo3)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### quick-xml 0.38.4
+* source: [https://github.com/tafia/quick-xml](https://github.com/tafia/quick-xml)
+* license: MIT
+
+------------------
+
+### quinn 0.11.9
+* source: [https://github.com/quinn-rs/quinn](https://github.com/quinn-rs/quinn)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### quinn-proto 0.11.13
+* source: [https://github.com/quinn-rs/quinn](https://github.com/quinn-rs/quinn)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### quinn-udp 0.5.14
+* source: [https://github.com/quinn-rs/quinn](https://github.com/quinn-rs/quinn)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### quote 1.0.43
+* source: [https://github.com/dtolnay/quote](https://github.com/dtolnay/quote)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### r-efi 5.3.0
+* source: [https://github.com/r-efi/r-efi](https://github.com/r-efi/r-efi)
+* license: Apache-2.0 OR LGPL-2.1-or-later OR MIT
+
+------------------
+
+### rand 0.8.5
+* source: [https://github.com/rust-random/rand](https://github.com/rust-random/rand)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rand 0.9.2
+* source: [https://github.com/rust-random/rand](https://github.com/rust-random/rand)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rand_chacha 0.3.1
+* source: [https://github.com/rust-random/rand](https://github.com/rust-random/rand)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rand_chacha 0.9.0
+* source: [https://github.com/rust-random/rand](https://github.com/rust-random/rand)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rand_core 0.6.4
+* source: [https://github.com/rust-random/rand](https://github.com/rust-random/rand)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rand_core 0.9.3
+* source: [https://github.com/rust-random/rand](https://github.com/rust-random/rand)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rawpointer 0.2.1
+* source: [https://github.com/bluss/rawpointer/](https://github.com/bluss/rawpointer/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### recursive 0.1.1
+* source: [https://github.com/orlp/recursive](https://github.com/orlp/recursive)
+* license: MIT
+
+------------------
+
+### recursive-proc-macro-impl 0.1.1
+* source: [https://github.com/orlp/recursive](https://github.com/orlp/recursive)
+* license: MIT
+
+------------------
+
+### redox_syscall 0.2.16
+* source: [https://gitlab.redox-os.org/redox-os/syscall](https://gitlab.redox-os.org/redox-os/syscall)
+* license: MIT
+
+------------------
+
+### redox_syscall 0.5.18
+* source: [https://gitlab.redox-os.org/redox-os/syscall](https://gitlab.redox-os.org/redox-os/syscall)
+* license: MIT
+
+------------------
+
+### redox_syscall 0.7.0
+* source: [https://gitlab.redox-os.org/redox-os/syscall](https://gitlab.redox-os.org/redox-os/syscall)
+* license: MIT
+
+------------------
+
+### redox_users 0.5.2
+* source: [https://gitlab.redox-os.org/redox-os/users](https://gitlab.redox-os.org/redox-os/users)
+* license: MIT
+
+------------------
+
+### regex 1.12.2
+* source: [https://github.com/rust-lang/regex](https://github.com/rust-lang/regex)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### regex-automata 0.4.13
+* source: [https://github.com/rust-lang/regex](https://github.com/rust-lang/regex)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### regex-lite 0.1.8
+* source: [https://github.com/rust-lang/regex](https://github.com/rust-lang/regex)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### regex-syntax 0.8.8
+* source: [https://github.com/rust-lang/regex](https://github.com/rust-lang/regex)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### repr_offset 0.2.2
+* source: [https://github.com/rodrimati1992/repr_offset_crates/](https://github.com/rodrimati1992/repr_offset_crates/)
+* license: Zlib
+
+------------------
+
+### reqwest 0.12.28
+* source: [https://github.com/seanmonstar/reqwest](https://github.com/seanmonstar/reqwest)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### reqwest-middleware 0.4.2
+* source: [https://github.com/TrueLayer/reqwest-middleware](https://github.com/TrueLayer/reqwest-middleware)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### reqwest-retry 0.7.0
+* source: [https://github.com/TrueLayer/reqwest-middleware](https://github.com/TrueLayer/reqwest-middleware)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### retry-policies 0.4.0
+* source: [https://github.com/TrueLayer/retry-policies](https://github.com/TrueLayer/retry-policies)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### ring 0.17.14
+* source: [https://github.com/briansmith/ring](https://github.com/briansmith/ring)
+* license: Apache-2.0 AND ISC
+
+------------------
+
+### roaring 0.11.3
+* source: [https://github.com/RoaringBitmap/roaring-rs](https://github.com/RoaringBitmap/roaring-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### roxmltree 0.21.1
+* source: [https://github.com/RazrFalcon/roxmltree](https://github.com/RazrFalcon/roxmltree)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rustc-hash 2.1.1
+* source: [https://github.com/rust-lang/rustc-hash](https://github.com/rust-lang/rustc-hash)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rustix 0.38.44
+* source: [https://github.com/bytecodealliance/rustix](https://github.com/bytecodealliance/rustix)
+* license: Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+
+------------------
+
+### rustix 1.1.3
+* source: [https://github.com/bytecodealliance/rustix](https://github.com/bytecodealliance/rustix)
+* license: Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+
+------------------
+
+### rustls 0.21.12
+* source: [https://github.com/rustls/rustls](https://github.com/rustls/rustls)
+* license: Apache-2.0 OR ISC OR MIT
+
+------------------
+
+### rustls 0.23.36
+* source: [https://github.com/rustls/rustls](https://github.com/rustls/rustls)
+* license: Apache-2.0 OR ISC OR MIT
+
+------------------
+
+### rustls-native-certs 0.8.3
+* source: [https://github.com/rustls/rustls-native-certs](https://github.com/rustls/rustls-native-certs)
+* license: Apache-2.0 OR ISC OR MIT
+
+------------------
+
+### rustls-pemfile 2.2.0
+* source: [https://github.com/rustls/pemfile](https://github.com/rustls/pemfile)
+* license: Apache-2.0 OR ISC OR MIT
+
+------------------
+
+### rustls-pki-types 1.13.2
+* source: [https://github.com/rustls/pki-types](https://github.com/rustls/pki-types)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### rustls-webpki 0.101.7
+* source: [https://github.com/rustls/webpki](https://github.com/rustls/webpki)
+* license: ISC
+
+------------------
+
+### rustls-webpki 0.103.8
+* source: [https://github.com/rustls/webpki](https://github.com/rustls/webpki)
+* license: ISC
+
+------------------
+
+### rustversion 1.0.22
+* source: [https://github.com/dtolnay/rustversion](https://github.com/dtolnay/rustversion)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### ryu 1.0.22
+* source: [https://github.com/dtolnay/ryu](https://github.com/dtolnay/ryu)
+* license: Apache-2.0 OR BSL-1.0
+
+------------------
+
+### same-file 1.0.6
+* source: [https://github.com/BurntSushi/same-file](https://github.com/BurntSushi/same-file)
+* license: MIT OR Unlicense
+
+------------------
+
+### schannel 0.1.28
+* source: [https://github.com/steffengy/schannel-rs](https://github.com/steffengy/schannel-rs)
+* license: MIT
+
+------------------
+
+### scopeguard 1.2.0
+* source: [https://github.com/bluss/scopeguard](https://github.com/bluss/scopeguard)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### sct 0.7.1
+* source: [https://github.com/rustls/sct.rs](https://github.com/rustls/sct.rs)
+* license: Apache-2.0 OR ISC OR MIT
+
+------------------
+
+### security-framework 3.5.1
+* source: [https://github.com/kornelski/rust-security-framework](https://github.com/kornelski/rust-security-framework)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### security-framework-sys 2.15.0
+* source: [https://github.com/kornelski/rust-security-framework](https://github.com/kornelski/rust-security-framework)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### semver 1.0.27
+* source: [https://github.com/dtolnay/semver](https://github.com/dtolnay/semver)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### seq-macro 0.3.6
+* source: [https://github.com/dtolnay/seq-macro](https://github.com/dtolnay/seq-macro)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### serde 1.0.228
+* source: [https://github.com/serde-rs/serde](https://github.com/serde-rs/serde)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### serde_core 1.0.228
+* source: [https://github.com/serde-rs/serde](https://github.com/serde-rs/serde)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### serde_derive 1.0.228
+* source: [https://github.com/serde-rs/serde](https://github.com/serde-rs/serde)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### serde_json 1.0.149
+* source: [https://github.com/serde-rs/json](https://github.com/serde-rs/json)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### serde_urlencoded 0.7.1
+* source: [https://github.com/nox/serde_urlencoded](https://github.com/nox/serde_urlencoded)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### sha2 0.10.9
+* source: [https://github.com/RustCrypto/hashes](https://github.com/RustCrypto/hashes)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### sharded-slab 0.1.7
+* source: [https://github.com/hawkw/sharded-slab](https://github.com/hawkw/sharded-slab)
+* license: MIT
+
+------------------
+
+### signal-hook-registry 1.4.8
+* source: [https://github.com/vorner/signal-hook](https://github.com/vorner/signal-hook)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### simd-adler32 0.3.8
+* source: [https://github.com/mcountryman/simd-adler32](https://github.com/mcountryman/simd-adler32)
+* license: MIT
+
+------------------
+
+### simdutf8 0.1.5
+* source: [https://github.com/rusticstuff/simdutf8](https://github.com/rusticstuff/simdutf8)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### siphasher 1.0.1
+* source: [https://github.com/jedisct1/rust-siphash](https://github.com/jedisct1/rust-siphash)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### slab 0.4.11
+* source: [https://github.com/tokio-rs/slab](https://github.com/tokio-rs/slab)
+* license: MIT
+
+------------------
+
+### smallvec 1.15.1
+* source: [https://github.com/servo/rust-smallvec](https://github.com/servo/rust-smallvec)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### snap 1.1.1
+* source: [https://github.com/BurntSushi/rust-snappy](https://github.com/BurntSushi/rust-snappy)
+* license: BSD-3-Clause
+
+------------------
+
+### socket2 0.5.10
+* source: [https://github.com/rust-lang/socket2](https://github.com/rust-lang/socket2)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### socket2 0.6.1
+* source: [https://github.com/rust-lang/socket2](https://github.com/rust-lang/socket2)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### sqlparser 0.59.0
+* source: [https://github.com/apache/datafusion-sqlparser-rs](https://github.com/apache/datafusion-sqlparser-rs)
+* license: Apache-2.0
+
+------------------
+
+### sqlparser_derive 0.3.0
+* source: [https://github.com/sqlparser-rs/sqlparser-rs](https://github.com/sqlparser-rs/sqlparser-rs)
+* license: Apache-2.0
+
+------------------
+
+### stable_deref_trait 1.2.1
+* source: [https://github.com/storyyeller/stable_deref_trait](https://github.com/storyyeller/stable_deref_trait)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### stacker 0.1.22
+* source: [https://github.com/rust-lang/stacker](https://github.com/rust-lang/stacker)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### strsim 0.11.1
+* source: [https://github.com/rapidfuzz/strsim-rs](https://github.com/rapidfuzz/strsim-rs)
+* license: MIT
+
+------------------
+
+### strum 0.26.3
+* source: [https://github.com/Peternator7/strum](https://github.com/Peternator7/strum)
+* license: MIT
+
+------------------
+
+### strum 0.27.2
+* source: [https://github.com/Peternator7/strum](https://github.com/Peternator7/strum)
+* license: MIT
+
+------------------
+
+### strum_macros 0.26.4
+* source: [https://github.com/Peternator7/strum](https://github.com/Peternator7/strum)
+* license: MIT
+
+------------------
+
+### strum_macros 0.27.2
+* source: [https://github.com/Peternator7/strum](https://github.com/Peternator7/strum)
+* license: MIT
+
+------------------
+
+### subtle 2.6.1
+* source: [https://github.com/dalek-cryptography/subtle](https://github.com/dalek-cryptography/subtle)
+* license: BSD-3-Clause
+
+------------------
+
+### syn 1.0.109
+* source: [https://github.com/dtolnay/syn](https://github.com/dtolnay/syn)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### syn 2.0.114
+* source: [https://github.com/dtolnay/syn](https://github.com/dtolnay/syn)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### sync_wrapper 1.0.2
+* source: [https://github.com/Actyx/sync_wrapper](https://github.com/Actyx/sync_wrapper)
+* license: Apache-2.0
+
+------------------
+
+### synstructure 0.13.2
+* source: [https://github.com/mystor/synstructure](https://github.com/mystor/synstructure)
+* license: MIT
+
+------------------
+
+### tagptr 0.2.0
+* source: [https://github.com/oliver-giersch/tagptr.git](https://github.com/oliver-giersch/tagptr.git)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### target-lexicon 0.13.4
+* source: [https://github.com/bytecodealliance/target-lexicon](https://github.com/bytecodealliance/target-lexicon)
+* license: Apache-2.0 WITH LLVM-exception
+
+------------------
+
+### tempfile 3.24.0
+* source: [https://github.com/Stebalien/tempfile](https://github.com/Stebalien/tempfile)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### termcolor 1.4.1
+* source: [https://github.com/BurntSushi/termcolor](https://github.com/BurntSushi/termcolor)
+* license: MIT OR Unlicense
+
+------------------
+
+### terminal_size 0.4.3
+* source: [https://github.com/eminence/terminal-size](https://github.com/eminence/terminal-size)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### thiserror 1.0.69
+* source: [https://github.com/dtolnay/thiserror](https://github.com/dtolnay/thiserror)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### thiserror 2.0.17
+* source: [https://github.com/dtolnay/thiserror](https://github.com/dtolnay/thiserror)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### thiserror-impl 1.0.69
+* source: [https://github.com/dtolnay/thiserror](https://github.com/dtolnay/thiserror)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### thiserror-impl 2.0.17
+* source: [https://github.com/dtolnay/thiserror](https://github.com/dtolnay/thiserror)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### thread_local 1.1.9
+* source: [https://github.com/Amanieu/thread_local-rs](https://github.com/Amanieu/thread_local-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### thrift 0.17.0
+* source: [https://github.com/apache/thrift/tree/master/lib/rs](https://github.com/apache/thrift/tree/master/lib/rs)
+* license: Apache-2.0
+
+------------------
+
+### time 0.3.44
+* source: [https://github.com/time-rs/time](https://github.com/time-rs/time)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### time-core 0.1.6
+* source: [https://github.com/time-rs/time](https://github.com/time-rs/time)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### time-macros 0.2.24
+* source: [https://github.com/time-rs/time](https://github.com/time-rs/time)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### tiny-keccak 2.0.2
+* source: [None](None)
+* license: CC0-1.0
+
+------------------
+
+### tinystr 0.8.2
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### tinyvec 1.10.0
+* source: [https://github.com/Lokathor/tinyvec](https://github.com/Lokathor/tinyvec)
+* license: Apache-2.0 OR MIT OR Zlib
+
+------------------
+
+### tinyvec_macros 0.1.1
+* source: [https://github.com/Soveu/tinyvec_macros](https://github.com/Soveu/tinyvec_macros)
+* license: Apache-2.0 OR MIT OR Zlib
+
+------------------
+
+### tokio 1.49.0
+* source: [https://github.com/tokio-rs/tokio](https://github.com/tokio-rs/tokio)
+* license: MIT
+
+------------------
+
+### tokio-macros 2.6.0
+* source: [https://github.com/tokio-rs/tokio](https://github.com/tokio-rs/tokio)
+* license: MIT
+
+------------------
+
+### tokio-rustls 0.24.1
+* source: [https://github.com/rustls/tokio-rustls](https://github.com/rustls/tokio-rustls)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### tokio-rustls 0.26.4
+* source: [https://github.com/rustls/tokio-rustls](https://github.com/rustls/tokio-rustls)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### tokio-stream 0.1.18
+* source: [https://github.com/tokio-rs/tokio](https://github.com/tokio-rs/tokio)
+* license: MIT
+
+------------------
+
+### tokio-util 0.7.18
+* source: [https://github.com/tokio-rs/tokio](https://github.com/tokio-rs/tokio)
+* license: MIT
+
+------------------
+
+### tonic 0.14.2
+* source: [https://github.com/hyperium/tonic](https://github.com/hyperium/tonic)
+* license: MIT
+
+------------------
+
+### tonic-prost 0.14.2
+* source: [https://github.com/hyperium/tonic](https://github.com/hyperium/tonic)
+* license: MIT
+
+------------------
+
+### tower 0.5.2
+* source: [https://github.com/tower-rs/tower](https://github.com/tower-rs/tower)
+* license: MIT
+
+------------------
+
+### tower-http 0.6.8
+* source: [https://github.com/tower-rs/tower-http](https://github.com/tower-rs/tower-http)
+* license: MIT
+
+------------------
+
+### tower-layer 0.3.3
+* source: [https://github.com/tower-rs/tower](https://github.com/tower-rs/tower)
+* license: MIT
+
+------------------
+
+### tower-service 0.3.3
+* source: [https://github.com/tower-rs/tower](https://github.com/tower-rs/tower)
+* license: MIT
+
+------------------
+
+### tracing 0.1.44
+* source: [https://github.com/tokio-rs/tracing](https://github.com/tokio-rs/tracing)
+* license: MIT
+
+------------------
+
+### tracing-attributes 0.1.31
+* source: [https://github.com/tokio-rs/tracing](https://github.com/tokio-rs/tracing)
+* license: MIT
+
+------------------
+
+### tracing-core 0.1.36
+* source: [https://github.com/tokio-rs/tracing](https://github.com/tokio-rs/tracing)
+* license: MIT
+
+------------------
+
+### tracing-log 0.2.0
+* source: [https://github.com/tokio-rs/tracing](https://github.com/tokio-rs/tracing)
+* license: MIT
+
+------------------
+
+### tracing-opentelemetry 0.32.0
+* source: [https://github.com/tokio-rs/tracing-opentelemetry](https://github.com/tokio-rs/tracing-opentelemetry)
+* license: MIT
+
+------------------
+
+### tracing-subscriber 0.3.22
+* source: [https://github.com/tokio-rs/tracing](https://github.com/tokio-rs/tracing)
+* license: MIT
+
+------------------
+
+### try-lock 0.2.5
+* source: [https://github.com/seanmonstar/try-lock](https://github.com/seanmonstar/try-lock)
+* license: MIT
+
+------------------
+
+### tstr 0.2.4
+* source: [https://github.com/rodrimati1992/tstr_crates/](https://github.com/rodrimati1992/tstr_crates/)
+* license: Zlib
+
+------------------
+
+### tstr_proc_macros 0.2.2
+* source: [https://github.com/rodrimati1992/tstr_crates/](https://github.com/rodrimati1992/tstr_crates/)
+* license: Zlib
+
+------------------
+
+### twox-hash 2.1.2
+* source: [https://github.com/shepmaster/twox-hash](https://github.com/shepmaster/twox-hash)
+* license: MIT
+
+------------------
+
+### typed-arena 2.0.2
+* source: [https://github.com/SimonSapin/rust-typed-arena](https://github.com/SimonSapin/rust-typed-arena)
+* license: MIT
+
+------------------
+
+### typed-builder 0.23.2
+* source: [https://github.com/idanarye/rust-typed-builder](https://github.com/idanarye/rust-typed-builder)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### typed-builder-macro 0.23.2
+* source: [https://github.com/idanarye/rust-typed-builder](https://github.com/idanarye/rust-typed-builder)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### typenum 1.19.0
+* source: [https://github.com/paholg/typenum](https://github.com/paholg/typenum)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### typewit 1.14.2
+* source: [https://github.com/rodrimati1992/typewit/](https://github.com/rodrimati1992/typewit/)
+* license: Zlib
+
+------------------
+
+### unicode-ident 1.0.22
+* source: [https://github.com/dtolnay/unicode-ident](https://github.com/dtolnay/unicode-ident)
+* license: (Apache-2.0 OR MIT) AND Unicode-3.0
+
+------------------
+
+### unicode-segmentation 1.12.0
+* source: [https://github.com/unicode-rs/unicode-segmentation](https://github.com/unicode-rs/unicode-segmentation)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### unicode-width 0.2.2
+* source: [https://github.com/unicode-rs/unicode-width](https://github.com/unicode-rs/unicode-width)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### unindent 0.2.4
+* source: [https://github.com/dtolnay/indoc](https://github.com/dtolnay/indoc)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### untrusted 0.9.0
+* source: [https://github.com/briansmith/untrusted](https://github.com/briansmith/untrusted)
+* license: ISC
+
+------------------
+
+### url 2.5.8
+* source: [https://github.com/servo/rust-url](https://github.com/servo/rust-url)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### urlencoding 2.1.3
+* source: [https://github.com/kornelski/rust_urlencoding](https://github.com/kornelski/rust_urlencoding)
+* license: MIT
+
+------------------
+
+### utf8_iter 1.0.4
+* source: [https://github.com/hsivonen/utf8_iter](https://github.com/hsivonen/utf8_iter)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### utf8parse 0.2.2
+* source: [https://github.com/alacritty/vte](https://github.com/alacritty/vte)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### uuid 1.19.0
+* source: [https://github.com/uuid-rs/uuid](https://github.com/uuid-rs/uuid)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### validator 0.19.0
+* source: [https://github.com/Keats/validator](https://github.com/Keats/validator)
+* license: MIT
+
+------------------
+
+### validator_derive 0.19.0
+* source: [https://github.com/Keats/validator](https://github.com/Keats/validator)
+* license: MIT
+
+------------------
+
+### valuable 0.1.1
+* source: [https://github.com/tokio-rs/valuable](https://github.com/tokio-rs/valuable)
+* license: MIT
+
+------------------
+
+### vsimd 0.8.0
+* source: [https://github.com/Nugine/simd](https://github.com/Nugine/simd)
+* license: MIT
+
+------------------
+
+### walkdir 2.5.0
+* source: [https://github.com/BurntSushi/walkdir](https://github.com/BurntSushi/walkdir)
+* license: MIT OR Unlicense
+
+------------------
+
+### want 0.3.1
+* source: [https://github.com/seanmonstar/want](https://github.com/seanmonstar/want)
+* license: MIT
+
+------------------
+
+### wasi 0.11.1+wasi-snapshot-preview1
+* source: [https://github.com/bytecodealliance/wasi](https://github.com/bytecodealliance/wasi)
+* license: Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+
+------------------
+
+### wasip2 1.0.1+wasi-0.2.4
+* source: [https://github.com/bytecodealliance/wasi-rs](https://github.com/bytecodealliance/wasi-rs)
+* license: Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+
+------------------
+
+### wasite 0.1.0
+* source: [https://github.com/ardaku/wasite](https://github.com/ardaku/wasite)
+* license: Apache-2.0 OR BSL-1.0 OR MIT
+
+------------------
+
+### wasm-bindgen 0.2.106
+* source: [https://github.com/wasm-bindgen/wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### wasm-bindgen-futures 0.4.56
+* source: [https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/futures](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/futures)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### wasm-bindgen-macro 0.2.106
+* source: [https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### wasm-bindgen-macro-support 0.2.106
+* source: [https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro-support](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro-support)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### wasm-bindgen-shared 0.2.106
+* source: [https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### wasm-streams 0.4.2
+* source: [https://github.com/MattiasBuelens/wasm-streams/](https://github.com/MattiasBuelens/wasm-streams/)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### wasm-timer 0.2.5
+* source: [https://github.com/tomaka/wasm-timer](https://github.com/tomaka/wasm-timer)
+* license: MIT
+
+------------------
+
+### web-sys 0.3.83
+* source: [https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/web-sys](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/web-sys)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### web-time 1.1.0
+* source: [https://github.com/daxpedda/web-time](https://github.com/daxpedda/web-time)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### webpki-roots 1.0.5
+* source: [https://github.com/rustls/webpki-roots](https://github.com/rustls/webpki-roots)
+* license: CDLA-Permissive-2.0
+
+------------------
+
+### whoami 1.6.1
+* source: [https://github.com/ardaku/whoami](https://github.com/ardaku/whoami)
+* license: Apache-2.0 OR BSL-1.0 OR MIT
+
+------------------
+
+### winapi 0.3.9
+* source: [https://github.com/retep998/winapi-rs](https://github.com/retep998/winapi-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### winapi-i686-pc-windows-gnu 0.4.0
+* source: [https://github.com/retep998/winapi-rs](https://github.com/retep998/winapi-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### winapi-util 0.1.11
+* source: [https://github.com/BurntSushi/winapi-util](https://github.com/BurntSushi/winapi-util)
+* license: MIT OR Unlicense
+
+------------------
+
+### winapi-x86_64-pc-windows-gnu 0.4.0
+* source: [https://github.com/retep998/winapi-rs](https://github.com/retep998/winapi-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-core 0.62.2
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-implement 0.60.2
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-interface 0.59.3
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-link 0.2.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-result 0.4.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-strings 0.5.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-sys 0.52.0
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-sys 0.59.0
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-sys 0.60.2
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-sys 0.61.2
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-targets 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows-targets 0.53.5
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_aarch64_gnullvm 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_aarch64_gnullvm 0.53.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_aarch64_msvc 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_aarch64_msvc 0.53.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_i686_gnu 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_i686_gnu 0.53.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_i686_gnullvm 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_i686_gnullvm 0.53.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_i686_msvc 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_i686_msvc 0.53.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_x86_64_gnu 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_x86_64_gnu 0.53.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_x86_64_gnullvm 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_x86_64_gnullvm 0.53.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_x86_64_msvc 0.52.6
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### windows_x86_64_msvc 0.53.1
+* source: [https://github.com/microsoft/windows-rs](https://github.com/microsoft/windows-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### wit-bindgen 0.46.0
+* source: [https://github.com/bytecodealliance/wit-bindgen](https://github.com/bytecodealliance/wit-bindgen)
+* license: Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+
+------------------
+
+### writeable 0.6.2
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### xmlparser 0.13.6
+* source: [https://github.com/RazrFalcon/xmlparser](https://github.com/RazrFalcon/xmlparser)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### yansi 1.0.1
+* source: [https://github.com/SergioBenitez/yansi](https://github.com/SergioBenitez/yansi)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### yoke 0.8.1
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### yoke-derive 0.8.1
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### z85 3.0.6
+* source: [https://github.com/decafbad/z85](https://github.com/decafbad/z85)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### zerocopy 0.8.33
+* source: [https://github.com/google/zerocopy](https://github.com/google/zerocopy)
+* license: Apache-2.0 OR BSD-2-Clause OR MIT
+
+------------------
+
+### zerocopy-derive 0.8.33
+* source: [https://github.com/google/zerocopy](https://github.com/google/zerocopy)
+* license: Apache-2.0 OR BSD-2-Clause OR MIT
+
+------------------
+
+### zerofrom 0.1.6
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### zerofrom-derive 0.1.6
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### zeroize 1.8.2
+* source: [https://github.com/RustCrypto/utils](https://github.com/RustCrypto/utils)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### zerotrie 0.2.3
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### zerovec 0.11.5
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### zerovec-derive 0.11.2
+* source: [https://github.com/unicode-org/icu4x](https://github.com/unicode-org/icu4x)
+* license: Unicode-3.0
+
+------------------
+
+### zlib-rs 0.5.5
+* source: [https://github.com/trifectatechfoundation/zlib-rs](https://github.com/trifectatechfoundation/zlib-rs)
+* license: Zlib
+
+------------------
+
+### zmij 1.0.12
+* source: [https://github.com/dtolnay/zmij](https://github.com/dtolnay/zmij)
+* license: MIT
+
+------------------
+
+### zstd 0.13.3
+* source: [https://github.com/gyscos/zstd-rs](https://github.com/gyscos/zstd-rs)
+* license: MIT
+
+------------------
+
+### zstd-safe 7.2.4
+* source: [https://github.com/gyscos/zstd-rs](https://github.com/gyscos/zstd-rs)
+* license: Apache-2.0 OR MIT
+
+------------------
+
+### zstd-sys 2.0.16+zstd.1.5.7
+* source: [https://github.com/gyscos/zstd-rs](https://github.com/gyscos/zstd-rs)
+* license: Apache-2.0 OR MIT
+
