@@ -22,7 +22,6 @@ use deltalake::datafusion::execution::TaskContextProvider;
 #[repr(C)]
 struct FFITableProviderCapsuleData {
     provider: FFI_TableProvider,
-    _ctx: Arc<SessionContext>,
 }
 use delta_kernel::expressions::Scalar;
 use delta_kernel::schema::{MetadataValue, StructField};
@@ -78,7 +77,7 @@ use uuid::Uuid;
 
 use writer::maybe_lazy_cast_reader;
 
-use crate::datafusion::TokioDeltaScan;
+use crate::datafusion::{ffi_logical_codec_from_pycapsule, TokioDeltaScan};
 use crate::error::{to_rt_err, DeltaError, DeltaProtocolError, PythonError};
 use crate::features::TableFeatures;
 use crate::filesystem::FsConfig;
@@ -1847,6 +1846,7 @@ impl RawDeltaTable {
     fn __datafusion_table_provider__<'py>(
         &self,
         py: Python<'py>,
+        ffi_codec: &Bound<'py, PyAny>
     ) -> PyResult<Bound<'py, PyCapsule>> {
         let handle = rt().handle().clone();
         let name = CString::new("datafusion_table_provider").unwrap();
@@ -1862,15 +1862,12 @@ impl RawDeltaTable {
         let tokio_scan =
             Arc::new(TokioDeltaScan::new(scan, handle.clone())) as Arc<dyn TableProvider>;
 
-        let ctx = Arc::new(SessionContext::new());
-        let task_ctx_provider = Arc::clone(&ctx) as Arc<dyn TaskContextProvider>;
-        let ffi_task_ctx = FFI_TaskContextProvider::from(&task_ctx_provider);
+        let codec = ffi_logical_codec_from_pycapsule(ffi_codec)?;
         let provider =
-            FFI_TableProvider::new(tokio_scan, false, Some(handle.clone()), ffi_task_ctx, None);
+            FFI_TableProvider::new_with_ffi_codec(tokio_scan, false, Some(handle.clone()), codec);
 
         let capsule_data = FFITableProviderCapsuleData {
             provider,
-            _ctx: ctx,
         };
         PyCapsule::new(py, capsule_data, Some(name))
     }
