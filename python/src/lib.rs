@@ -14,6 +14,7 @@ use arrow::pyarrow::PyArrowType;
 use arrow_schema::SchemaRef;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
 use datafusion_ffi::execution::FFI_TaskContextProvider;
+use datafusion_ffi::proto::logical_extension_codec::FFI_LogicalExtensionCodec;
 use datafusion_ffi::table_provider::FFI_TableProvider;
 use deltalake::datafusion::execution::TaskContextProvider;
 
@@ -22,7 +23,7 @@ use deltalake::datafusion::execution::TaskContextProvider;
 #[repr(C)]
 struct FFITableProviderCapsuleData {
     provider: FFI_TableProvider,
-    _ctx: Arc<SessionContext>,
+    _ctx: Option<Arc<SessionContext>>,
 }
 use delta_kernel::expressions::Scalar;
 use delta_kernel::schema::{MetadataValue, StructField};
@@ -44,12 +45,12 @@ use deltalake::kernel::{
 use deltalake::lakefs::LakeFSCustomExecuteHandler;
 use deltalake::logstore::LogStoreRef;
 use deltalake::logstore::{IORuntime, ObjectStoreRef};
+use deltalake::operations::CustomExecuteHandler;
 use deltalake::operations::convert_to_delta::{ConvertToDeltaBuilder, PartitionStrategy};
-use deltalake::operations::optimize::{create_session_state_for_optimize, OptimizeType};
+use deltalake::operations::optimize::{OptimizeType, create_session_state_for_optimize};
 use deltalake::operations::update_table_metadata::TableMetadataUpdate;
 use deltalake::operations::vacuum::VacuumMode;
 use deltalake::operations::write::WriteBuilder;
-use deltalake::operations::CustomExecuteHandler;
 use deltalake::parquet::basic::{Compression, Encoding};
 use deltalake::parquet::errors::ParquetError;
 use deltalake::parquet::file::properties::{EnabledStatistics, WriterProperties};
@@ -57,12 +58,13 @@ use deltalake::partitions::PartitionFilter;
 use deltalake::protocol::{DeltaOperation, SaveMode};
 use deltalake::table::config::TablePropertiesExt as _;
 use deltalake::table::state::DeltaTableState;
-use deltalake::{init_client_version, DeltaResult, DeltaTable, DeltaTableBuilder};
+use deltalake::{DeltaResult, DeltaTable, DeltaTableBuilder, init_client_version};
 use futures::TryStreamExt;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::ffi;
 use pyo3::pybacked::PyBackedStr;
-use pyo3::types::{PyCapsule, PyDict, PyFrozenSet};
-use pyo3::{prelude::*, IntoPyObjectExt};
+use pyo3::types::{PyAny, PyCapsule, PyDict, PyFrozenSet};
+use pyo3::{IntoPyObjectExt, prelude::*};
 use pyo3_arrow::export::{Arro3RecordBatch, Arro3RecordBatchReader};
 use pyo3_arrow::{PyRecordBatchReader, PySchema as PyArrowSchema};
 use schema::PySchema;
@@ -79,13 +81,13 @@ use uuid::Uuid;
 use writer::maybe_lazy_cast_reader;
 
 use crate::datafusion::TokioDeltaScan;
-use crate::error::{to_rt_err, DeltaError, DeltaProtocolError, PythonError};
+use crate::error::{DeltaError, DeltaProtocolError, PythonError, to_rt_err};
 use crate::features::TableFeatures;
 use crate::filesystem::FsConfig;
 use crate::merge::PyMergeBuilder;
 use crate::query::PyQueryBuilder;
 use crate::reader::convert_stream_to_reader;
-use crate::schema::{schema_to_pyobject, Field};
+use crate::schema::{Field, schema_to_pyobject};
 use crate::utils::rt;
 use crate::writer::to_lazy_table;
 
@@ -1847,6 +1849,7 @@ impl RawDeltaTable {
     fn __datafusion_table_provider__<'py>(
         &self,
         py: Python<'py>,
+        session: Option<Bound<'py, PyAny>>,
     ) -> PyResult<Bound<'py, PyCapsule>> {
         let handle = rt().handle().clone();
         let name = CString::new("datafusion_table_provider").unwrap();
@@ -1862,11 +1865,36 @@ impl RawDeltaTable {
         let tokio_scan =
             Arc::new(TokioDeltaScan::new(scan, handle.clone())) as Arc<dyn TableProvider>;
 
-        let ctx = Arc::new(SessionContext::new());
-        let task_ctx_provider = Arc::clone(&ctx) as Arc<dyn TaskContextProvider>;
-        let ffi_task_ctx = FFI_TaskContextProvider::from(&task_ctx_provider);
-        let provider =
-            FFI_TableProvider::new(tokio_scan, false, Some(handle.clone()), ffi_task_ctx, None);
+        let (provider, ctx) = if let Some(session) = session {
+            let codec_obj = session.call_method0("__datafusion_logical_extension_codec__")?;
+            let capsule = codec_obj.downcast::<PyCapsule>()?;
+
+            let codec_name = CString::new("datafusion_logical_extension_codec").unwrap();
+            let ptr = unsafe { ffi::PyCapsule_GetPointer(capsule.as_ptr(), codec_name.as_ptr()) };
+            if ptr.is_null() {
+                return Err(PyErr::fetch(py));
+            }
+
+            let logical_codec = unsafe { &*(ptr as *const FFI_LogicalExtensionCodec) }.clone();
+            let provider = FFI_TableProvider::new_with_ffi_codec(
+                tokio_scan,
+                false,
+                Some(handle),
+                logical_codec,
+            );
+
+            (provider, None)
+        } else {
+            // No codec provided by the caller; create our own SessionContext to supply a
+            // TaskContextProvider to the FFI layer.
+            let ctx = Arc::new(SessionContext::new());
+            let task_ctx_provider = Arc::clone(&ctx) as Arc<dyn TaskContextProvider>;
+            let ffi_task_ctx = FFI_TaskContextProvider::from(&task_ctx_provider);
+
+            let provider =
+                FFI_TableProvider::new(tokio_scan, false, Some(handle), ffi_task_ctx, None);
+            (provider, Some(ctx))
+        };
 
         let capsule_data = FFITableProviderCapsuleData {
             provider,

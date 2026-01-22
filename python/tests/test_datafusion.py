@@ -1,17 +1,9 @@
 import os
-from importlib.metadata import PackageNotFoundError, version
 
 import pytest
 from arro3.core import Array, DataType, Field, Table
 
 from deltalake import DeltaTable, write_deltalake
-
-
-def _datafusion_major_version() -> int | None:
-    try:
-        return int(version("datafusion").split(".")[0])
-    except (PackageNotFoundError, ValueError):
-        return None
 
 
 @pytest.mark.datafusion
@@ -21,17 +13,16 @@ def test_datafusion_table_provider(tmp_path):
             "DataFusion Python integration tests are disabled by default; set DELTALAKE_RUN_DATAFUSION_TESTS=1"
         )
 
-    datafusion_major = _datafusion_major_version()
-    if datafusion_major is None or datafusion_major < 52:
-        pytest.skip(
-            "DataFusion Python integration requires datafusion>=52 wheels (PyPI currently provides 51.x)"
-        )
+    try:
+        from datafusion import SessionContext
+    except ImportError:
+        pytest.skip("DataFusion Python is not installed")
     nrows = 5
     table = Table(
         {
             "id": Array(
                 ["1", "2", "3", "4", "5"],
-                Field("id", type=DataType.string(), nullable=True),
+                Field("id", type=DataType.string_view(), nullable=True),
             ),
             "price": Array(
                 list(range(nrows)), Field("price", type=DataType.int64(), nullable=True)
@@ -45,14 +36,19 @@ def test_datafusion_table_provider(tmp_path):
         },
     )
 
-    from datafusion import SessionContext
-
     write_deltalake(tmp_path, table)
 
     dt = DeltaTable(tmp_path)
 
     session = SessionContext()
-    session.register_table("tbl", dt)
+    try:
+        session.register_table("tbl", dt)
+    except ImportError as err:
+        msg = str(err)
+        if "Incompatible libraries" in msg and "table providers" in msg:
+            pytest.skip(msg)
+        raise
+
     data = session.sql("SELECT * FROM tbl")
 
     assert Table.from_arrow(data) == table

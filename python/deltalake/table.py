@@ -1166,7 +1166,7 @@ class DeltaTable:
             post_commithook_properties=post_commithook_properties,
         )
 
-    def __datafusion_table_provider__(self) -> Any:
+    def __datafusion_table_provider__(self, session: Any | None = None) -> Any:
         """Return the DataFusion table provider PyCapsule interface.
 
         To support DataFusion features such as push down filtering, this function will return a PyCapsule
@@ -1201,7 +1201,7 @@ class DeltaTable:
             +----+----+----+
             ```
         """
-        return self._table.__datafusion_table_provider__()
+        return self._table.__datafusion_table_provider__(session)
 
 
 class TableMerger:
