@@ -314,6 +314,11 @@ impl RecordBatchReader for ChunkedRecordBatchReader {
     }
 }
 
+/// Streams DV payloads (portable roaring bytes).
+///
+/// Note: `Iterator::next()` performs object-store IO and blocks the calling thread while fetching
+/// and decoding DVs. This is expected for a synchronous `RecordBatchReader` and is safe for the
+/// Python bindings, which construct and consume readers outside the GIL.
 pub(crate) struct DeletionVectorRoaringBytesReader {
     schema: SchemaRef,
     input: ChunkedRecordBatchReader,
