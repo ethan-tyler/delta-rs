@@ -429,6 +429,15 @@ class DeltaTable:
         The output uses a sparse, protocol-faithful representation: DV descriptors + derived DV URI.
         For DV payloads (portable roaring bytes), see :meth:`deletion_vector_roaring_bytes`.
 
+        Output columns:
+            - ``path``: file path as recorded in the Delta log.
+            - ``file_uri``: fully-qualified file URI, consistent with :meth:`file_uris`.
+            - ``dv_storage_type``: ``"u" | "i" | "p"`` (relative, inline, absolute).
+            - ``dv_path_or_inline_dv``, ``dv_offset``, ``dv_size_in_bytes``, ``dv_cardinality``:
+              protocol descriptor fields.
+            - ``dv_file_uri``: derived absolute DV URI for ``"u"``/``"p"``; null for ``"i"``.
+            - ``dv_unique_id``: stable identifier for the DV descriptor.
+
         PyArrow interop (zero-copy via the Arrow C-Stream interface):
 
         .. code-block:: python
@@ -467,6 +476,12 @@ class DeltaTable:
         Given the DV descriptors produced by :meth:`deletion_vectors`, this method reads/decodes the
         DV payloads (object-store IO) and returns bytes in the Delta protocol's sparse format:
         ``magic u32 (LE) + roaring portable serialization``.
+
+        Notes:
+            - ``dv_roaring_bytes`` is a compact, engine-agnostic encoding. Consumers should treat it
+              as opaque unless they implement roaring portable deserialization.
+            - The first 4 bytes are the little-endian magic ``1681511377``; the remainder is what a
+              roaring implementation typically expects as "portable" serialized bytes.
 
         PyArrow interop (zero-copy via the Arrow C-Stream interface):
 
