@@ -490,6 +490,49 @@ impl RawDeltaTable {
         })
     }
 
+    #[pyo3(signature = (dvs, batch_size = 256, max_concurrent = 16))]
+    pub fn deletion_vector_roaring_bytes(
+        &self,
+        py: Python,
+        dvs: pyo3_arrow::input::AnyRecordBatch,
+        batch_size: usize,
+        max_concurrent: usize,
+    ) -> PyResult<Arro3RecordBatchReader> {
+        if !self.has_files()? {
+            return Err(DeltaError::new_err("Table is instantiated without files."));
+        }
+        if batch_size == 0 {
+            return Err(PyValueError::new_err("batch_size must be greater than 0"));
+        }
+
+        let max_concurrent = max_concurrent.clamp(1, 256);
+
+        py.detach(|| {
+            let log_store = self.log_store()?;
+            let _guard = rt().enter();
+            let storage = log_store.engine(None).storage_handler();
+
+            let mut table_root = log_store.root_url().clone();
+            if !table_root.path().ends_with('/') {
+                table_root.set_path(&format!("{}/", table_root.path()));
+            }
+
+            let reader = dvs.into_reader()?;
+            let reader = deletion_vectors::DeletionVectorRoaringBytesReader::try_new(
+                reader,
+                storage,
+                table_root,
+                batch_size,
+                max_concurrent,
+            )
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+            let reader: Box<dyn deltalake::arrow::array::RecordBatchReader + Send> =
+                Box::new(reader);
+            Ok(reader.into())
+        })
+    }
+
     #[getter]
     pub fn schema<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let schema = self.with_table(|t| {
