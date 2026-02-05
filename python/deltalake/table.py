@@ -414,6 +414,12 @@ class DeltaTable:
             allow_out_of_range=allow_out_of_range,
         )
 
+    def _validate_dv_params(self, batch_size: int) -> None:
+        if not self._table.has_files():
+            raise DeltaError("Table is instantiated without files.")
+        if batch_size <= 0:
+            raise ValueError("batch_size must be greater than 0")
+
     def deletion_vectors(
         self,
         *,
@@ -456,10 +462,7 @@ class DeltaTable:
                 active files with DV columns set to null where absent.
             batch_size: Maximum rows per emitted RecordBatch (must be > 0).
         """
-        if not self._table.has_files():
-            raise DeltaError("Table is instantiated without files.")
-        if batch_size <= 0:
-            raise ValueError("batch_size must be greater than 0")
+        self._validate_dv_params(batch_size)
         return self._table.deletion_vectors(
             include_all_files=include_all_files, batch_size=batch_size
         )
@@ -512,10 +515,7 @@ class DeltaTable:
             max_concurrent: Maximum concurrent DV reads. Values are clamped to ``[1, 256]`` (values
                 < 1 are treated as 1).
         """
-        if not self._table.has_files():
-            raise DeltaError("Table is instantiated without files.")
-        if batch_size <= 0:
-            raise ValueError("batch_size must be greater than 0")
+        self._validate_dv_params(batch_size)
         max_concurrent = operator.index(max_concurrent)
         max_concurrent = min(max(max_concurrent, 1), 256)
         return self._table.deletion_vector_roaring_bytes(

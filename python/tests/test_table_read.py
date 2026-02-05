@@ -1230,10 +1230,11 @@ def test_deletion_vector_roaring_bytes_batch_size_zero_raises():
         dt.deletion_vector_roaring_bytes(dt.deletion_vectors(), batch_size=0)
 
 
-def test_deletion_vector_roaring_bytes_max_concurrent_zero_is_clamped():
+@pytest.mark.parametrize("max_concurrent", [0, -1])
+def test_deletion_vector_roaring_bytes_max_concurrent_is_clamped(max_concurrent):
     dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
     out = dt.deletion_vector_roaring_bytes(
-        dt.deletion_vectors(), max_concurrent=0
+        dt.deletion_vectors(), max_concurrent=max_concurrent
     ).read_all()
     assert out["dv_roaring_bytes"].to_pylist()[0] is not None
 
@@ -1287,7 +1288,8 @@ def test_deletion_vector_roaring_bytes_accepts_recordbatch_input():
     meta_batch = meta_tbl.to_batches()[0]
 
     out = dt.deletion_vector_roaring_bytes(meta_batch).read_all()
-    assert out["dv_roaring_bytes"].to_pylist()[0] is not None
+    b = out["dv_roaring_bytes"].to_pylist()[0]
+    assert isinstance(b, (bytes, bytearray)) and len(b) > 4
 
 
 def test_deletion_vector_roaring_bytes_schema_mismatch_missing_column():
@@ -1318,19 +1320,13 @@ def test_deletion_vector_roaring_bytes_null_dv_path_or_inline_errors_cleanly():
         null_col,
     )
 
+    # ArrowError::SchemaError surfaces as bare Exception via the Arrow C-Stream interface
     with pytest.raises(
         Exception,
         match="dv_path_or_inline_dv must be non-null when dv_storage_type is set",
     ):
         dt.deletion_vector_roaring_bytes(bad_batch).read_all()
 
-
-def test_deletion_vector_roaring_bytes_max_concurrent_negative_is_clamped():
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
-    out = dt.deletion_vector_roaring_bytes(
-        dt.deletion_vectors(), max_concurrent=-1
-    ).read_all()
-    assert out["dv_roaring_bytes"].to_pylist()[0] is not None
 
 
 def test_deletion_vector_roaring_bytes_on_table_without_dvs_returns_all_null():

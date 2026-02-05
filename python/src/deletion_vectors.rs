@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use arrow_schema::{ArrowError, DataType, Field, Schema, SchemaRef};
 use deltalake::arrow::array::{
-    ArrayRef, AsArray, Int32Builder, Int64Builder, LargeBinaryBuilder, RecordBatchReader,
+    Array, ArrayRef, AsArray, Int32Builder, Int64Builder, LargeBinaryBuilder, RecordBatchReader,
     StringBuilder,
 };
 use deltalake::arrow::datatypes::{Int32Type, Int64Type};
@@ -342,6 +342,22 @@ fn is_string_type(dt: &DataType) -> bool {
     )
 }
 
+fn string_value<'a>(
+    col: &'a dyn Array,
+    row: usize,
+    schema: &SchemaRef,
+    col_name: &'static str,
+) -> Result<&'a str, ArrowError> {
+    match col.data_type() {
+        DataType::Utf8 => Ok(col.as_string::<i32>().value(row)),
+        DataType::LargeUtf8 => Ok(col.as_string::<i64>().value(row)),
+        DataType::Utf8View => Ok(col.as_string_view().value(row)),
+        other => Err(ArrowError::SchemaError(format!(
+            "Invalid {col_name} type {other:?} in batch schema {schema:?}"
+        ))),
+    }
+}
+
 fn schema_error(
     schema: &Schema,
     missing: Vec<&'static str>,
@@ -409,44 +425,28 @@ impl DeletionVectorRoaringBytesReader {
         let dv_cardinality_idx = idx("dv_cardinality");
         let dv_unique_id_idx = schema.index_of("dv_unique_id").ok();
 
-        if let Some(i) = path_idx {
-            if !is_string_type(schema.field(i).data_type()) {
-                wrong_types.push(("path", schema.field(i).data_type().clone()));
+        for (name, col_idx) in [
+            ("path", path_idx),
+            ("file_uri", file_uri_idx),
+            ("dv_storage_type", dv_storage_type_idx),
+            ("dv_path_or_inline_dv", dv_path_or_inline_dv_idx),
+            ("dv_unique_id", dv_unique_id_idx),
+        ] {
+            if let Some(i) = col_idx {
+                if !is_string_type(schema.field(i).data_type()) {
+                    wrong_types.push((name, schema.field(i).data_type().clone()));
+                }
             }
         }
-        if let Some(i) = file_uri_idx {
-            if !is_string_type(schema.field(i).data_type()) {
-                wrong_types.push(("file_uri", schema.field(i).data_type().clone()));
-            }
-        }
-        if let Some(i) = dv_storage_type_idx {
-            if !is_string_type(schema.field(i).data_type()) {
-                wrong_types.push(("dv_storage_type", schema.field(i).data_type().clone()));
-            }
-        }
-        if let Some(i) = dv_path_or_inline_dv_idx {
-            if !is_string_type(schema.field(i).data_type()) {
-                wrong_types.push(("dv_path_or_inline_dv", schema.field(i).data_type().clone()));
-            }
-        }
-        if let Some(i) = dv_offset_idx {
-            if schema.field(i).data_type() != &DataType::Int32 {
-                wrong_types.push(("dv_offset", schema.field(i).data_type().clone()));
-            }
-        }
-        if let Some(i) = dv_size_in_bytes_idx {
-            if schema.field(i).data_type() != &DataType::Int32 {
-                wrong_types.push(("dv_size_in_bytes", schema.field(i).data_type().clone()));
-            }
-        }
-        if let Some(i) = dv_cardinality_idx {
-            if schema.field(i).data_type() != &DataType::Int64 {
-                wrong_types.push(("dv_cardinality", schema.field(i).data_type().clone()));
-            }
-        }
-        if let Some(i) = dv_unique_id_idx {
-            if !is_string_type(schema.field(i).data_type()) {
-                wrong_types.push(("dv_unique_id", schema.field(i).data_type().clone()));
+        for (name, col_idx, expected) in [
+            ("dv_offset", dv_offset_idx, &DataType::Int32),
+            ("dv_size_in_bytes", dv_size_in_bytes_idx, &DataType::Int32),
+            ("dv_cardinality", dv_cardinality_idx, &DataType::Int64),
+        ] {
+            if let Some(i) = col_idx {
+                if schema.field(i).data_type() != expected {
+                    wrong_types.push((name, schema.field(i).data_type().clone()));
+                }
             }
         }
 
@@ -492,16 +492,20 @@ impl Iterator for DeletionVectorRoaringBytesReader {
         let size_col = batch.column(self.dv_size_in_bytes_idx).as_ref();
         let cardinality_col = batch.column(self.dv_cardinality_idx).as_ref();
 
-        let unique_id_col = self
-            .dv_unique_id_idx
-            .and_then(|idx| batch.schema().index_of("dv_unique_id").ok().map(|_| idx))
-            .map(|idx| batch.column(idx).as_ref());
+        let unique_id_col = self.dv_unique_id_idx.map(|idx| batch.column(idx).as_ref());
 
         let mut unique_id_by_row: Vec<Option<String>> = vec![None; row_count];
         let mut size_by_row: Vec<Option<i32>> = vec![None; row_count];
-        let mut jobs: Vec<DvJob> = Vec::new();
+        let mut jobs: Vec<DvJob> = Vec::with_capacity(row_count);
 
         for row in 0..row_count {
+            if !path_col.is_valid(row) || !file_uri_col.is_valid(row) {
+                return Some(Err(ArrowError::SchemaError(
+                    "path and file_uri must be non-null in deletion vector descriptor batches"
+                        .into(),
+                )));
+            }
+
             if !storage_type_col.is_valid(row) {
                 continue;
             }
@@ -512,27 +516,17 @@ impl Iterator for DeletionVectorRoaringBytesReader {
                 )));
             }
 
-            let storage_type = match storage_type_col.data_type() {
-                DataType::Utf8 => storage_type_col.as_string::<i32>().value(row),
-                DataType::LargeUtf8 => storage_type_col.as_string::<i64>().value(row),
-                DataType::Utf8View => storage_type_col.as_string_view().value(row),
-                other => {
-                    return Some(Err(ArrowError::SchemaError(format!(
-                        "Invalid dv_storage_type type {other:?} in batch schema {schema:?}"
-                    ))));
-                }
+            let storage_type = match string_value(storage_type_col, row, &schema, "dv_storage_type")
+            {
+                Ok(v) => v,
+                Err(e) => return Some(Err(e)),
             };
 
-            let path_or_inline = match path_or_inline_col.data_type() {
-                DataType::Utf8 => path_or_inline_col.as_string::<i32>().value(row),
-                DataType::LargeUtf8 => path_or_inline_col.as_string::<i64>().value(row),
-                DataType::Utf8View => path_or_inline_col.as_string_view().value(row),
-                other => {
-                    return Some(Err(ArrowError::SchemaError(format!(
-                        "Invalid dv_path_or_inline_dv type {other:?} in batch schema {schema:?}"
-                    ))));
-                }
-            };
+            let path_or_inline =
+                match string_value(path_or_inline_col, row, &schema, "dv_path_or_inline_dv") {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
 
             if !size_col.is_valid(row) || !cardinality_col.is_valid(row) {
                 return Some(Err(ArrowError::SchemaError(
@@ -540,11 +534,9 @@ impl Iterator for DeletionVectorRoaringBytesReader {
                 )));
             }
 
-            let offset = if offset_col.is_valid(row) {
-                Some(offset_col.as_primitive::<Int32Type>().value(row))
-            } else {
-                None
-            };
+            let offset = offset_col
+                .is_valid(row)
+                .then(|| offset_col.as_primitive::<Int32Type>().value(row));
             let size_in_bytes = size_col.as_primitive::<Int32Type>().value(row);
             let cardinality = cardinality_col.as_primitive::<Int64Type>().value(row);
 
@@ -567,16 +559,12 @@ impl Iterator for DeletionVectorRoaringBytesReader {
             };
 
             let unique_id = match unique_id_col {
-                Some(col) if col.is_valid(row) => match col.data_type() {
-                    DataType::Utf8 => col.as_string::<i32>().value(row).to_string(),
-                    DataType::LargeUtf8 => col.as_string::<i64>().value(row).to_string(),
-                    DataType::Utf8View => col.as_string_view().value(row).to_string(),
-                    other => {
-                        return Some(Err(ArrowError::SchemaError(format!(
-                            "Invalid dv_unique_id type {other:?} in batch schema {schema:?}"
-                        ))));
+                Some(col) if col.is_valid(row) => {
+                    match string_value(col, row, &schema, "dv_unique_id") {
+                        Ok(v) => v.to_string(),
+                        Err(e) => return Some(Err(e)),
                     }
-                },
+                }
                 _ => dv.unique_id(),
             };
 
@@ -657,32 +645,13 @@ impl Iterator for DeletionVectorRoaringBytesReader {
         let mut out_bytes = LargeBinaryBuilder::with_capacity(row_count, 1024);
 
         for row in 0..row_count {
-            if !path_col.is_valid(row) || !file_uri_col.is_valid(row) {
-                return Some(Err(ArrowError::SchemaError(
-                    "path and file_uri must be non-null in deletion vector descriptor batches"
-                        .into(),
-                )));
-            }
-
-            let path = match path_col.data_type() {
-                DataType::Utf8 => path_col.as_string::<i32>().value(row),
-                DataType::LargeUtf8 => path_col.as_string::<i64>().value(row),
-                DataType::Utf8View => path_col.as_string_view().value(row),
-                other => {
-                    return Some(Err(ArrowError::SchemaError(format!(
-                        "Invalid path type {other:?} in batch schema {schema:?}"
-                    ))));
-                }
+            let path = match string_value(path_col, row, &schema, "path") {
+                Ok(v) => v,
+                Err(e) => return Some(Err(e)),
             };
-            let file_uri = match file_uri_col.data_type() {
-                DataType::Utf8 => file_uri_col.as_string::<i32>().value(row),
-                DataType::LargeUtf8 => file_uri_col.as_string::<i64>().value(row),
-                DataType::Utf8View => file_uri_col.as_string_view().value(row),
-                other => {
-                    return Some(Err(ArrowError::SchemaError(format!(
-                        "Invalid file_uri type {other:?} in batch schema {schema:?}"
-                    ))));
-                }
+            let file_uri = match string_value(file_uri_col, row, &schema, "file_uri") {
+                Ok(v) => v,
+                Err(e) => return Some(Err(e)),
             };
 
             out_path.append_value(path);
