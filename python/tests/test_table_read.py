@@ -15,7 +15,7 @@ from arro3.core import Field as ArrowField
 
 from deltalake import DeltaTable
 from deltalake._util import encode_partition_value
-from deltalake.exceptions import DeltaProtocolError
+from deltalake.exceptions import DeltaError, DeltaProtocolError
 from deltalake.query import QueryBuilder
 from deltalake.table import ProtocolVersions
 from deltalake.writer import write_deltalake
@@ -1191,3 +1191,73 @@ def test_nested_runtimes(tmp_path):
     con.execute(f"CREATE EXTERNAL TABLE raw_csv STORED AS CSV LOCATION '{csv_path}'")
     df = con.execute("SELECT * FROM raw_csv")
     write_deltalake(tmp_path / "delta", df, mode="overwrite")
+
+
+def test_deletion_vectors_metadata_smoke():
+    table_path = "../crates/test/tests/data/table-with-dv-small"
+    dt = DeltaTable(table_path)
+
+    tbl = dt.deletion_vectors().read_all()
+    assert tbl["dv_storage_type"].to_pylist() == ["u"]
+    assert tbl["dv_offset"].to_pylist() == [1]
+    assert tbl["dv_size_in_bytes"].to_pylist() == [36]
+    assert tbl["dv_cardinality"].to_pylist() == [2]
+    assert tbl["dv_unique_id"].to_pylist()[0]
+    assert tbl["dv_file_uri"].to_pylist()[0].endswith(".bin")
+    assert tbl["path"].to_pylist()[0].endswith(".parquet")
+
+
+def test_deletion_vector_roaring_bytes_magic_and_len():
+    table_path = "../crates/test/tests/data/table-with-dv-small"
+    dt = DeltaTable(table_path)
+
+    out = dt.deletion_vector_roaring_bytes(dt.deletion_vectors()).read_all()
+    b = out["dv_roaring_bytes"].to_pylist()[0]
+    assert isinstance(b, (bytes, bytearray))
+    assert len(b) == 36
+    assert int.from_bytes(b[:4], "little") == 1681511377
+
+
+def test_deletion_vectors_batch_size_zero_raises():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    with pytest.raises(ValueError, match="batch_size must be greater than 0"):
+        dt.deletion_vectors(batch_size=0)
+
+
+def test_deletion_vector_roaring_bytes_batch_size_zero_raises():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    with pytest.raises(ValueError, match="batch_size must be greater than 0"):
+        dt.deletion_vector_roaring_bytes(dt.deletion_vectors(), batch_size=0)
+
+
+def test_deletion_vector_roaring_bytes_max_concurrent_zero_is_clamped():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    out = dt.deletion_vector_roaring_bytes(
+        dt.deletion_vectors(), max_concurrent=0
+    ).read_all()
+    assert out["dv_roaring_bytes"].to_pylist()[0] is not None
+
+
+def test_deletion_vectors_include_all_files_on_table_without_dvs():
+    dt = DeltaTable("../crates/test/tests/data/simple_table")
+    tbl = dt.deletion_vectors(include_all_files=True).read_all()
+
+    assert set(tbl["file_uri"].to_pylist()) == set(dt.file_uris())
+    assert all(v is None for v in tbl["dv_storage_type"].to_pylist())
+    assert all(v is None for v in tbl["dv_unique_id"].to_pylist())
+    assert all(v is None for v in tbl["dv_file_uri"].to_pylist())
+
+
+def test_deletion_vectors_without_files_raises():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small", without_files=True)
+    with pytest.raises(DeltaError, match="Table is instantiated without files\\."):
+        dt.deletion_vectors()
+
+
+def test_deletion_vector_roaring_bytes_without_files_raises():
+    table_path = "../crates/test/tests/data/table-with-dv-small"
+    dvs = DeltaTable(table_path).deletion_vectors()
+
+    dt = DeltaTable(table_path, without_files=True)
+    with pytest.raises(DeltaError, match="Table is instantiated without files\\."):
+        dt.deletion_vector_roaring_bytes(dvs)
