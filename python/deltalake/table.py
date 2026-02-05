@@ -413,6 +413,87 @@ class DeltaTable:
             allow_out_of_range=allow_out_of_range,
         )
 
+    def deletion_vectors(
+        self,
+        *,
+        include_all_files: bool = False,
+        batch_size: int = 1024,
+    ) -> RecordBatchReader:
+        """
+        Stream per-file Deletion Vector (DV) metadata as an Arrow RecordBatchReader.
+
+        This is a metadata-only operation (no object store IO). By default, only files with a DV
+        are returned. Use ``include_all_files=True`` to include all active files with DV columns set
+        to null when absent.
+
+        The output uses a sparse, protocol-faithful representation: DV descriptors + derived DV URI.
+        For DV payloads (portable roaring bytes), see :meth:`deletion_vector_roaring_bytes`.
+
+        PyArrow interop (zero-copy via the Arrow C-Stream interface):
+
+        .. code-block:: python
+
+            import pyarrow as pa
+
+            arro_reader = dt.deletion_vectors()
+            pa_reader = pa.RecordBatchReader._import_from_c_capsule(
+                arro_reader.__arrow_c_stream__()
+            )
+            pa_table = pa_reader.read_all()
+
+        Args:
+            include_all_files: If False (default), return only files with a DV; if True, return all
+                active files with DV columns set to null where absent.
+            batch_size: Maximum rows per emitted RecordBatch (must be > 0).
+        """
+        if not self._table.has_files():
+            raise DeltaError("Table is instantiated without files.")
+        if batch_size <= 0:
+            raise ValueError("batch_size must be greater than 0")
+        return self._table.deletion_vectors(
+            include_all_files=include_all_files, batch_size=batch_size
+        )
+
+    def deletion_vector_roaring_bytes(
+        self,
+        dvs: RecordBatch | RecordBatchReader,
+        *,
+        batch_size: int = 256,
+        max_concurrent: int = 16,
+    ) -> RecordBatchReader:
+        """
+        Fetch DV payloads as portable roaring bytes in an Arrow RecordBatchReader.
+
+        Given the DV descriptors produced by :meth:`deletion_vectors`, this method reads/decodes the
+        DV payloads (object-store IO) and returns bytes in the Delta protocol's sparse format:
+        ``magic u32 (LE) + roaring portable serialization``.
+
+        PyArrow interop (zero-copy via the Arrow C-Stream interface):
+
+        .. code-block:: python
+
+            import pyarrow as pa
+
+            arro_reader = dt.deletion_vector_roaring_bytes(dt.deletion_vectors())
+            pa_reader = pa.RecordBatchReader._import_from_c_capsule(
+                arro_reader.__arrow_c_stream__()
+            )
+            pa_table = pa_reader.read_all()
+
+        Args:
+            dvs: Either an ``arro3.core.RecordBatchReader`` (streaming pipeline) or an
+                ``arro3.core.RecordBatch`` (caller-side filtering/subsetting).
+            batch_size: Maximum rows per emitted RecordBatch (must be > 0).
+            max_concurrent: Maximum concurrent DV reads. Values are clamped to ``[1, 256]``.
+        """
+        if not self._table.has_files():
+            raise DeltaError("Table is instantiated without files.")
+        if batch_size <= 0:
+            raise ValueError("batch_size must be greater than 0")
+        return self._table.deletion_vector_roaring_bytes(
+            dvs=dvs, batch_size=batch_size, max_concurrent=max_concurrent
+        )
+
     @property
     def table_uri(self) -> str:
         return self._table.table_uri()
