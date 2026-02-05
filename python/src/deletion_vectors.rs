@@ -697,3 +697,74 @@ impl RecordBatchReader for DeletionVectorRoaringBytesReader {
         self.schema.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+    use std::sync::Arc;
+
+    use bytes::Bytes;
+    use delta_kernel::actions::deletion_vector::{
+        DeletionVectorDescriptor, DeletionVectorStorageType,
+    };
+    use delta_kernel::{DeltaResult, Error, FileMeta, FileSlice, StorageHandler};
+    use roaring::RoaringTreemap;
+    use url::Url;
+
+    #[derive(Debug)]
+    struct DummyStorage;
+
+    impl StorageHandler for DummyStorage {
+        fn list_from(
+            &self,
+            _path: &Url,
+        ) -> DeltaResult<Box<dyn Iterator<Item = DeltaResult<FileMeta>>>> {
+            Err(Error::internal_error("DummyStorage should not be used"))
+        }
+
+        fn read_files(
+            &self,
+            _files: Vec<FileSlice>,
+        ) -> DeltaResult<Box<dyn Iterator<Item = DeltaResult<Bytes>>>> {
+            Err(Error::internal_error("DummyStorage should not be used"))
+        }
+
+        fn copy_atomic(&self, _src: &Url, _dest: &Url) -> DeltaResult<()> {
+            Err(Error::internal_error("DummyStorage should not be used"))
+        }
+
+        fn head(&self, _path: &Url) -> DeltaResult<FileMeta> {
+            Err(Error::internal_error("DummyStorage should not be used"))
+        }
+    }
+
+    #[test]
+    fn test_inline_dv_portable_roaring_bytes_roundtrip() {
+        let dv = DeletionVectorDescriptor {
+            storage_type: DeletionVectorStorageType::Inline,
+            // Copied from delta-kernel tests; represents deletions for [3, 4, 7, 11, 18, 29]
+            path_or_inline_dv: "^Bg9^0rr910000000000iXQKl0rr91000f55c8Xg0@@D72lkbi5=-{L"
+                .to_string(),
+            offset: None,
+            size_in_bytes: 44,
+            cardinality: 6,
+        };
+
+        let storage: Arc<dyn StorageHandler> = Arc::new(DummyStorage);
+        let parent = Url::parse("http://not.used").unwrap();
+        let treemap = dv.read(storage, &parent).unwrap();
+
+        let mut bytes = Vec::with_capacity(4 + treemap.serialized_size());
+        bytes.extend_from_slice(&1681511377u32.to_le_bytes());
+        treemap.serialize_into(&mut bytes).unwrap();
+
+        assert_eq!(bytes.len(), dv.size_in_bytes as usize);
+        assert_eq!(
+            u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
+            1681511377
+        );
+
+        let roundtrip = RoaringTreemap::deserialize_from(Cursor::new(&bytes[4..])).unwrap();
+        assert_eq!(treemap, roundtrip);
+    }
+}

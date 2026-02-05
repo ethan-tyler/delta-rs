@@ -101,6 +101,10 @@ features = [
     "lakefs",
 ]
 
+[dev-dependencies]
+bytes.workspace = true
+roaring = "0.11.2"
+
 [features]
 default = ["rustls"]
 native-tls = ["deltalake/s3-native-tls", "deltalake/glue"]
