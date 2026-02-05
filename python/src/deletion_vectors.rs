@@ -13,6 +13,8 @@ use futures::{StreamExt as _, stream};
 use object_store::path::Path as ObjectStorePath;
 use url::Url;
 
+const DV_ROARING_MAGIC: u32 = 1681511377;
+
 fn table_root_url(log_store: &LogStoreRef) -> Url {
     let mut root = log_store.root_url().clone();
     if !root.path().ends_with('/') {
@@ -499,6 +501,12 @@ impl Iterator for DeletionVectorRoaringBytesReader {
                 continue;
             }
 
+            if !path_or_inline_col.is_valid(row) {
+                return Some(Err(ArrowError::SchemaError(
+                    "dv_path_or_inline_dv must be non-null when dv_storage_type is set".into(),
+                )));
+            }
+
             let storage_type = match storage_type_col.data_type() {
                 DataType::Utf8 => storage_type_col.as_string::<i32>().value(row),
                 DataType::LargeUtf8 => storage_type_col.as_string::<i64>().value(row),
@@ -597,7 +605,7 @@ impl Iterator for DeletionVectorRoaringBytesReader {
                             })?;
 
                             let mut bytes = Vec::with_capacity(4 + treemap.serialized_size());
-                            bytes.extend_from_slice(&1681511377u32.to_le_bytes());
+                            bytes.extend_from_slice(&DV_ROARING_MAGIC.to_le_bytes());
                             treemap.serialize_into(&mut bytes).map_err(|e| {
                                 ArrowError::ExternalError(Box::new(DvPayloadError {
                                     dv_unique_id: job.dv_unique_id.clone(),
@@ -644,6 +652,13 @@ impl Iterator for DeletionVectorRoaringBytesReader {
         let mut out_bytes = LargeBinaryBuilder::with_capacity(row_count, 1024);
 
         for row in 0..row_count {
+            if !path_col.is_valid(row) || !file_uri_col.is_valid(row) {
+                return Some(Err(ArrowError::SchemaError(
+                    "path and file_uri must be non-null in deletion vector descriptor batches"
+                        .into(),
+                )));
+            }
+
             let path = match path_col.data_type() {
                 DataType::Utf8 => path_col.as_string::<i32>().value(row),
                 DataType::LargeUtf8 => path_col.as_string::<i64>().value(row),
@@ -755,13 +770,13 @@ mod tests {
         let treemap = dv.read(storage, &parent).unwrap();
 
         let mut bytes = Vec::with_capacity(4 + treemap.serialized_size());
-        bytes.extend_from_slice(&1681511377u32.to_le_bytes());
+        bytes.extend_from_slice(&super::DV_ROARING_MAGIC.to_le_bytes());
         treemap.serialize_into(&mut bytes).unwrap();
 
         assert_eq!(bytes.len(), dv.size_in_bytes as usize);
         assert_eq!(
             u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
-            1681511377
+            super::DV_ROARING_MAGIC
         );
 
         let roundtrip = RoaringTreemap::deserialize_from(Cursor::new(&bytes[4..])).unwrap();

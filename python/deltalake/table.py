@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import operator
 from collections.abc import Generator, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -482,6 +483,15 @@ class DeltaTable:
               as opaque unless they implement roaring portable deserialization.
             - The first 4 bytes are the little-endian magic ``1681511377``; the remainder is what a
               roaring implementation typically expects as "portable" serialized bytes.
+            - Rows without a DV descriptor (null ``dv_storage_type``) return null
+              ``dv_unique_id``/``dv_roaring_bytes`` and do not perform any DV IO.
+
+        Output columns:
+            - ``path``: file path as recorded in the Delta log.
+            - ``file_uri``: fully-qualified file URI, consistent with :meth:`file_uris`.
+            - ``dv_unique_id``: stable identifier for the DV descriptor (null when DV absent).
+            - ``dv_size_in_bytes``: expected size of the returned payload (null when DV absent).
+            - ``dv_roaring_bytes``: portable roaring payload bytes (null when DV absent).
 
         PyArrow interop (zero-copy via the Arrow C-Stream interface):
 
@@ -499,12 +509,15 @@ class DeltaTable:
             dvs: Either an ``arro3.core.RecordBatchReader`` (streaming pipeline) or an
                 ``arro3.core.RecordBatch`` (caller-side filtering/subsetting).
             batch_size: Maximum rows per emitted RecordBatch (must be > 0).
-            max_concurrent: Maximum concurrent DV reads. Values are clamped to ``[1, 256]``.
+            max_concurrent: Maximum concurrent DV reads. Values are clamped to ``[1, 256]`` (values
+                < 1 are treated as 1).
         """
         if not self._table.has_files():
             raise DeltaError("Table is instantiated without files.")
         if batch_size <= 0:
             raise ValueError("batch_size must be greater than 0")
+        max_concurrent = operator.index(max_concurrent)
+        max_concurrent = min(max(max_concurrent, 1), 256)
         return self._table.deletion_vector_roaring_bytes(
             dvs=dvs, batch_size=batch_size, max_concurrent=max_concurrent
         )

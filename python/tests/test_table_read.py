@@ -1261,3 +1261,85 @@ def test_deletion_vector_roaring_bytes_without_files_raises():
     dt = DeltaTable(table_path, without_files=True)
     with pytest.raises(DeltaError, match="Table is instantiated without files\\."):
         dt.deletion_vector_roaring_bytes(dvs)
+
+
+def test_deletion_vectors_default_on_table_without_dvs_is_empty():
+    dt = DeltaTable("../crates/test/tests/data/table-without-dv-small")
+    tbl = dt.deletion_vectors().read_all()
+
+    assert tbl.num_rows == 0
+    assert tbl.column_names == [
+        "path",
+        "file_uri",
+        "dv_storage_type",
+        "dv_path_or_inline_dv",
+        "dv_offset",
+        "dv_size_in_bytes",
+        "dv_cardinality",
+        "dv_file_uri",
+        "dv_unique_id",
+    ]
+
+
+def test_deletion_vector_roaring_bytes_accepts_recordbatch_input():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    meta_tbl = dt.deletion_vectors().read_all()
+    meta_batch = meta_tbl.to_batches()[0]
+
+    out = dt.deletion_vector_roaring_bytes(meta_batch).read_all()
+    assert out["dv_roaring_bytes"].to_pylist()[0] is not None
+
+
+def test_deletion_vector_roaring_bytes_schema_mismatch_missing_column():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    meta_tbl = dt.deletion_vectors().read_all()
+    meta_batch = meta_tbl.to_batches()[0]
+
+    idx = meta_batch.column_names.index("dv_cardinality")
+    bad_batch = meta_batch.remove_column(idx)
+
+    with pytest.raises(ValueError, match="missing columns: dv_cardinality"):
+        dt.deletion_vector_roaring_bytes(bad_batch).read_all()
+
+
+def test_deletion_vector_roaring_bytes_null_dv_path_or_inline_errors_cleanly():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    meta_tbl = dt.deletion_vectors().read_all()
+    meta_batch = meta_tbl.to_batches()[0]
+
+    idx = meta_batch.column_names.index("dv_path_or_inline_dv")
+    null_col = Array(
+        [None] * meta_batch.num_rows,
+        ArrowField("dv_path_or_inline_dv", type=DataType.string(), nullable=True),
+    )
+    bad_batch = meta_batch.set_column(
+        idx,
+        ArrowField("dv_path_or_inline_dv", type=DataType.string(), nullable=True),
+        null_col,
+    )
+
+    with pytest.raises(
+        Exception,
+        match="dv_path_or_inline_dv must be non-null when dv_storage_type is set",
+    ):
+        dt.deletion_vector_roaring_bytes(bad_batch).read_all()
+
+
+def test_deletion_vector_roaring_bytes_max_concurrent_negative_is_clamped():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    out = dt.deletion_vector_roaring_bytes(
+        dt.deletion_vectors(), max_concurrent=-1
+    ).read_all()
+    assert out["dv_roaring_bytes"].to_pylist()[0] is not None
+
+
+def test_deletion_vector_roaring_bytes_on_table_without_dvs_returns_all_null():
+    dt = DeltaTable("../crates/test/tests/data/table-without-dv-small")
+    out = dt.deletion_vector_roaring_bytes(
+        dt.deletion_vectors(include_all_files=True)
+    ).read_all()
+
+    assert set(out["file_uri"].to_pylist()) == set(dt.file_uris())
+    assert all(v is None for v in out["dv_unique_id"].to_pylist())
+    assert all(v is None for v in out["dv_size_in_bytes"].to_pylist())
+    assert all(v is None for v in out["dv_roaring_bytes"].to_pylist())

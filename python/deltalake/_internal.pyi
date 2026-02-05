@@ -103,13 +103,13 @@ class RawDeltaTable:
     def files(self, partition_filters: PartitionFilterType | None) -> list[str]: ...
     def file_uris(self, partition_filters: PartitionFilterType | None) -> list[str]: ...
     def deletion_vectors(
-        self, include_all_files: bool, batch_size: int
+        self, include_all_files: bool = False, batch_size: int = 1024
     ) -> RecordBatchReader: ...
     def deletion_vector_roaring_bytes(
         self,
         dvs: RecordBatch | RecordBatchReader,
-        batch_size: int,
-        max_concurrent: int,
+        batch_size: int = 256,
+        max_concurrent: int = 16,
     ) -> RecordBatchReader: ...
     def generate(self) -> None: ...
     def vacuum(
