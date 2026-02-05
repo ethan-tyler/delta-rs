@@ -1,4 +1,5 @@
 mod datafusion;
+mod deletion_vectors;
 mod error;
 mod features;
 mod filesystem;
@@ -458,6 +459,35 @@ impl RawDeltaTable {
                     .collect::<Vec<String>>())
             })
         }
+    }
+
+    #[pyo3(signature = (include_all_files = false, batch_size = 1024))]
+    pub fn deletion_vectors(
+        &self,
+        py: Python,
+        include_all_files: bool,
+        batch_size: usize,
+    ) -> PyResult<Arro3RecordBatchReader> {
+        if !self.has_files()? {
+            return Err(DeltaError::new_err("Table is instantiated without files."));
+        }
+        if batch_size == 0 {
+            return Err(PyValueError::new_err("batch_size must be greater than 0"));
+        }
+
+        py.detach(|| {
+            let log_store = self.log_store()?;
+            let state = self.cloned_state()?;
+            let reader = deletion_vectors::DeletionVectorsMetadataReader::new(
+                log_store,
+                state,
+                include_all_files,
+                batch_size,
+            );
+            let reader: Box<dyn deltalake::arrow::array::RecordBatchReader + Send> =
+                Box::new(reader);
+            Ok(reader.into())
+        })
     }
 
     #[getter]
