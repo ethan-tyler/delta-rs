@@ -79,6 +79,11 @@ pub use table_provider::{
 pub(crate) use table_provider::{
     DeltaScanBuilder, next::FILE_ID_COLUMN_DEFAULT, update_datafusion_session,
 };
+// Used by operations (optimize, merge, write) in future PRs.
+#[allow(unused_imports)]
+pub(crate) use table_provider::next::{
+    FileSelection, MissingFilePolicy, normalize_path_as_file_id,
+};
 
 pub(crate) const PATH_COLUMN: &str = "__delta_rs_path";
 
