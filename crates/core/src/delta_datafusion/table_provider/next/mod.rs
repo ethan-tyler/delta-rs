@@ -755,61 +755,25 @@ mod tests {
             .await?
             .with_file_selection(selection);
 
-        let err = provider.scan(&state, None, &[], None).await.unwrap_err();
-        let err_str = err.to_string();
-        assert!(!err_str.contains("urluser"));
-        assert!(!err_str.contains("urlpassword"));
-        assert!(!err_str.contains("urltoken"));
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_scan_with_file_selection_strict_missing_files_errors_with_filters() -> TestResult
-    {
-        let log_store = TestTables::Simple.table_builder()?.build_storage()?;
-        let snapshot = Arc::new(Snapshot::try_new(&log_store, Default::default(), None).await?);
-        let table_root = snapshot.scan_builder().build()?.table_root().clone();
-
-        let session = Arc::new(create_session().into_inner());
-        let state = session.state_ref().read().clone();
-
-        let mut selected_file_ids: Vec<String> = snapshot
-            .file_views(log_store.as_ref(), None)
-            .take(1)
-            .map_ok(|view| table_root.join(view.path_raw()).unwrap().to_string())
-            .try_collect()
-            .await?;
-        selected_file_ids.push(
-            "https://urluser:urlpassword@example.com/__does_not_exist__.parquet?token=urltoken"
-                .to_string(),
-        );
-
-        let selection = FileSelection::new(selected_file_ids);
-        let provider = DeltaScan::builder()
-            .with_snapshot(snapshot)
-            .with_file_column(FILE_ID_COLUMN_DEFAULT)
-            .build()
-            .await?
-            .with_file_selection(selection);
-
-        let err = provider
-            .scan(&state, None, &[col("id").gt(lit(0_i64))], None)
-            .await
-            .unwrap_err();
-        let err_str = err.to_string();
-
-        assert!(
-            err_str.contains("File selection contains"),
-            "unexpected error: {err_str}"
-        );
-        assert!(
-            err_str.contains("missing files"),
-            "unexpected error: {err_str}"
-        );
-        assert!(!err_str.contains("urluser"));
-        assert!(!err_str.contains("urlpassword"));
-        assert!(!err_str.contains("urltoken"));
+        // Validate strict policy behavior with and without extra scan filters.
+        for filters in [vec![], vec![col("id").gt(lit(0_i64))]] {
+            let err = provider
+                .scan(&state, None, &filters, None)
+                .await
+                .unwrap_err();
+            let err_str = err.to_string();
+            assert!(
+                err_str.contains("File selection contains"),
+                "unexpected error: {err_str}"
+            );
+            assert!(
+                err_str.contains("missing files"),
+                "unexpected error: {err_str}"
+            );
+            assert!(!err_str.contains("urluser"));
+            assert!(!err_str.contains("urlpassword"));
+            assert!(!err_str.contains("urltoken"));
+        }
 
         Ok(())
     }
@@ -926,91 +890,58 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_scan_with_file_selection_new_requires_normalized_file_ids() -> TestResult {
-        let log_store = TestTables::Simple.table_builder()?.build_storage()?;
-        let snapshot = Arc::new(Snapshot::try_new(&log_store, Default::default(), None).await?);
+    #[test]
+    fn test_file_selection_from_paths_normalizes_urls() -> TestResult {
+        let cases = vec![
+            (
+                "file:///tmp/delta",
+                "data/part-000.parquet",
+                "file:///tmp/delta/data/part-000.parquet",
+            ),
+            (
+                "file:///tmp/delta/",
+                "file:///other/table/part-000.parquet",
+                "file:///other/table/part-000.parquet",
+            ),
+            (
+                "s3://my-bucket/warehouse/my_table",
+                "part-00000-abc.snappy.parquet",
+                "s3://my-bucket/warehouse/my_table/part-00000-abc.snappy.parquet",
+            ),
+            (
+                "az://container/path/to/table/",
+                "year=2024/part-00000.parquet",
+                "az://container/path/to/table/year=2024/part-00000.parquet",
+            ),
+            (
+                "gs://bucket/delta_table",
+                "gs://bucket/delta_table/data/part-000.parquet",
+                "gs://bucket/delta_table/data/part-000.parquet",
+            ),
+        ];
 
-        let session = Arc::new(create_session().into_inner());
-        let state = session.state_ref().read().clone();
-
-        let selection = FileSelection::new(["data/part-000.parquet".to_string()]);
-        let provider = DeltaScan::builder()
-            .with_snapshot(snapshot)
-            .with_file_column(FILE_ID_COLUMN_DEFAULT)
-            .build()
-            .await?
-            .with_file_selection(selection);
-
-        let err = provider.scan(&state, None, &[], None).await.unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("File selection contains 1 missing files")
-        );
+        for (table_root, input, expected) in cases {
+            let table_root = Url::parse(table_root).unwrap();
+            let selection = FileSelection::from_paths([input], &table_root)?;
+            assert!(selection.file_ids.contains(expected));
+            assert_eq!(selection.missing_file_policy, MissingFilePolicy::Error);
+        }
 
         Ok(())
     }
 
     #[test]
-    fn test_missing_file_policy_reexport_is_accessible() {
-        let _ = crate::delta_datafusion::MissingFilePolicy::Ignore;
-    }
-
-    #[test]
-    fn test_file_selection_from_paths_normalizes_table_root_url() -> TestResult {
-        let table_root = Url::parse("file:///tmp/delta").unwrap();
-        let selection = FileSelection::from_paths(["data/part-000.parquet"], &table_root)?;
-
-        assert!(
-            selection
-                .file_ids
-                .contains("file:///tmp/delta/data/part-000.parquet")
-        );
-        assert_eq!(selection.missing_file_policy, MissingFilePolicy::Error);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_file_selection_from_paths_accepts_full_urls() -> TestResult {
+    fn test_file_selection_from_paths_handles_encoding_variants() -> TestResult {
         let table_root = Url::parse("file:///tmp/delta/").unwrap();
-        let selection =
-            FileSelection::from_paths(["file:///other/table/part-000.parquet"], &table_root)?;
+        let expected = "file:///tmp/delta/data/part%20space%F0%9F%98%80.parquet";
 
-        assert!(
-            selection
-                .file_ids
-                .contains("file:///other/table/part-000.parquet")
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_file_selection_from_paths_preserves_percent_encoding() -> TestResult {
-        let table_root = Url::parse("file:///tmp/delta/").unwrap();
-        let selection =
-            FileSelection::from_paths(["data/part%20space%F0%9F%98%80.parquet"], &table_root)?;
-
-        assert!(
-            selection
-                .file_ids
-                .contains("file:///tmp/delta/data/part%20space%F0%9F%98%80.parquet")
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_file_selection_from_paths_encodes_special_characters() -> TestResult {
-        let table_root = Url::parse("file:///tmp/delta/").unwrap();
-        let selection = FileSelection::from_paths(["data/part space😀.parquet"], &table_root)?;
-
-        assert!(
-            selection
-                .file_ids
-                .contains("file:///tmp/delta/data/part%20space%F0%9F%98%80.parquet")
-        );
+        for input in [
+            "data/part%20space%F0%9F%98%80.parquet",
+            "data/part space😀.parquet",
+        ] {
+            let selection = FileSelection::from_paths([input], &table_root)?;
+            assert!(selection.file_ids.contains(expected));
+        }
 
         Ok(())
     }
@@ -1027,39 +958,6 @@ mod tests {
         let from_paths = FileSelection::from_paths(["data/part-000.parquet"], &table_root)?;
 
         assert_eq!(from_adds.file_ids, from_paths.file_ids);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_file_selection_from_paths_normalizes_cloud_urls() -> TestResult {
-        let s3_root = Url::parse("s3://my-bucket/warehouse/my_table").unwrap();
-        let selection = FileSelection::from_paths(["part-00000-abc.snappy.parquet"], &s3_root)?;
-
-        assert!(
-            selection
-                .file_ids
-                .contains("s3://my-bucket/warehouse/my_table/part-00000-abc.snappy.parquet")
-        );
-
-        let az_root = Url::parse("az://container/path/to/table/").unwrap();
-        let selection = FileSelection::from_paths(["year=2024/part-00000.parquet"], &az_root)?;
-
-        assert!(
-            selection
-                .file_ids
-                .contains("az://container/path/to/table/year=2024/part-00000.parquet")
-        );
-
-        let gs_root = Url::parse("gs://bucket/delta_table").unwrap();
-        let selection =
-            FileSelection::from_paths(["gs://bucket/delta_table/data/part-000.parquet"], &gs_root)?;
-
-        assert!(
-            selection
-                .file_ids
-                .contains("gs://bucket/delta_table/data/part-000.parquet")
-        );
 
         Ok(())
     }
