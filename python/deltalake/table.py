@@ -488,6 +488,8 @@ class DeltaTable:
               roaring implementation typically expects as "portable" serialized bytes.
             - Rows without a DV descriptor (null ``dv_storage_type``) return null
               ``dv_unique_id``/``dv_roaring_bytes`` and do not perform any DV IO.
+            - Descriptor rows must match an active DV in the current table snapshot. If
+              ``dv_unique_id`` is provided, it must match the descriptor-derived unique id.
 
         Output columns:
             - ``path``: file path as recorded in the Delta log.

@@ -1304,6 +1304,29 @@ def test_deletion_vector_roaring_bytes_schema_mismatch_missing_column():
         dt.deletion_vector_roaring_bytes(bad_batch).read_all()
 
 
+def test_deletion_vector_roaring_bytes_rejects_dv_unique_id_mismatch():
+    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    meta_tbl = dt.deletion_vectors().read_all()
+    meta_batch = meta_tbl.to_batches()[0]
+
+    idx = meta_batch.column_names.index("dv_unique_id")
+    bad_uid_col = Array(
+        ["bad-uid"] * meta_batch.num_rows,
+        ArrowField("dv_unique_id", type=DataType.string(), nullable=True),
+    )
+    bad_batch = meta_batch.set_column(
+        idx,
+        ArrowField("dv_unique_id", type=DataType.string(), nullable=True),
+        bad_uid_col,
+    )
+
+    with pytest.raises(
+        Exception,
+        match="dv_unique_id does not match descriptor-derived unique id",
+    ):
+        dt.deletion_vector_roaring_bytes(bad_batch).read_all()
+
+
 def test_deletion_vector_roaring_bytes_null_dv_path_or_inline_errors_cleanly():
     dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
     meta_tbl = dt.deletion_vectors().read_all()
@@ -1327,6 +1350,47 @@ def test_deletion_vector_roaring_bytes_null_dv_path_or_inline_errors_cleanly():
     ):
         dt.deletion_vector_roaring_bytes(bad_batch).read_all()
 
+
+
+def test_deletion_vectors_streams_multiple_batches_for_small_batch_size():
+    dt = DeltaTable("../crates/test/tests/data/simple_table")
+    reader = dt.deletion_vectors(include_all_files=True, batch_size=2)
+
+    row_counts = []
+    seen_file_uris = []
+    while True:
+        try:
+            batch = reader.read_next_batch()
+            row_counts.append(batch.num_rows)
+            seen_file_uris.extend(batch["file_uri"].to_pylist())
+        except StopIteration:
+            break
+
+    assert row_counts == [2, 2, 1]
+    assert set(seen_file_uris) == set(dt.file_uris())
+
+
+def test_deletion_vector_roaring_bytes_streams_multiple_batches_for_small_batch_size():
+    dt = DeltaTable("../crates/test/tests/data/simple_table")
+    reader = dt.deletion_vector_roaring_bytes(
+        dt.deletion_vectors(include_all_files=True), batch_size=2
+    )
+
+    row_counts = []
+    seen_file_uris = []
+    seen_bytes = []
+    while True:
+        try:
+            batch = reader.read_next_batch()
+            row_counts.append(batch.num_rows)
+            seen_file_uris.extend(batch["file_uri"].to_pylist())
+            seen_bytes.extend(batch["dv_roaring_bytes"].to_pylist())
+        except StopIteration:
+            break
+
+    assert row_counts == [2, 2, 1]
+    assert set(seen_file_uris) == set(dt.file_uris())
+    assert all(v is None for v in seen_bytes)
 
 
 def test_deletion_vector_roaring_bytes_on_table_without_dvs_returns_all_null():

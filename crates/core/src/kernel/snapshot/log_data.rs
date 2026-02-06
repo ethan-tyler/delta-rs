@@ -96,7 +96,7 @@ impl<'a> LogDataHandler<'a> {
 
 impl IntoIterator for LogDataHandler<'_> {
     type Item = LogicalFileView;
-    type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
+    type IntoIter = Box<dyn Iterator<Item = Self::Item> + Send>;
 
     fn into_iter(self) -> Self::IntoIter {
         Box::new(self.data.to_vec().into_iter().flat_map(|batch| {

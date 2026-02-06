@@ -505,23 +505,21 @@ impl RawDeltaTable {
             return Err(PyValueError::new_err("batch_size must be greater than 0"));
         }
 
-        let max_concurrent = max_concurrent.clamp(1, 256);
-
         py.detach(|| {
             let log_store = self.log_store()?;
+            let state = self.cloned_state()?;
+            let allowed_dv_unique_ids = Arc::new(deletion_vectors::snapshot_dv_unique_ids(&state));
             let _guard = rt().enter();
             let storage = log_store.engine(None).storage_handler();
 
-            let mut table_root = log_store.root_url().clone();
-            if !table_root.path().ends_with('/') {
-                table_root.set_path(&format!("{}/", table_root.path()));
-            }
+            let table_root = deletion_vectors::table_root_url(&log_store);
 
             let reader = dvs.into_reader()?;
             let reader = deletion_vectors::DeletionVectorRoaringBytesReader::try_new(
                 reader,
                 storage,
                 table_root,
+                allowed_dv_unique_ids,
                 batch_size,
                 max_concurrent,
             )
