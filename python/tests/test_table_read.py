@@ -1193,9 +1193,26 @@ def test_nested_runtimes(tmp_path):
     write_deltalake(tmp_path / "delta", df, mode="overwrite")
 
 
+_DV_TABLE_PATH = "../crates/test/tests/data/table-with-dv-small"
+_SIMPLE_TABLE_PATH = "../crates/test/tests/data/simple_table"
+_TABLE_WITHOUT_DV_PATH = "../crates/test/tests/data/table-without-dv-small"
+
+
+def _dv_meta_batch():
+    return DeltaTable(_DV_TABLE_PATH).deletion_vectors().read_all().to_batches()[0]
+
+
+def _collect_batches(reader):
+    batches = []
+    while True:
+        try:
+            batches.append(reader.read_next_batch())
+        except StopIteration:
+            return batches
+
+
 def test_deletion_vectors_metadata_smoke():
-    table_path = "../crates/test/tests/data/table-with-dv-small"
-    dt = DeltaTable(table_path)
+    dt = DeltaTable(_DV_TABLE_PATH)
 
     tbl = dt.deletion_vectors().read_all()
     assert tbl["dv_storage_type"].to_pylist() == ["u"]
@@ -1208,8 +1225,7 @@ def test_deletion_vectors_metadata_smoke():
 
 
 def test_deletion_vector_roaring_bytes_magic_and_len():
-    table_path = "../crates/test/tests/data/table-with-dv-small"
-    dt = DeltaTable(table_path)
+    dt = DeltaTable(_DV_TABLE_PATH)
 
     out = dt.deletion_vector_roaring_bytes(dt.deletion_vectors()).read_all()
     b = out["dv_roaring_bytes"].to_pylist()[0]
@@ -1219,20 +1235,20 @@ def test_deletion_vector_roaring_bytes_magic_and_len():
 
 
 def test_deletion_vectors_batch_size_zero_raises():
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    dt = DeltaTable(_DV_TABLE_PATH)
     with pytest.raises(ValueError, match="batch_size must be greater than 0"):
         dt.deletion_vectors(batch_size=0)
 
 
 def test_deletion_vector_roaring_bytes_batch_size_zero_raises():
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    dt = DeltaTable(_DV_TABLE_PATH)
     with pytest.raises(ValueError, match="batch_size must be greater than 0"):
         dt.deletion_vector_roaring_bytes(dt.deletion_vectors(), batch_size=0)
 
 
 @pytest.mark.parametrize("max_concurrent", [0, -1])
 def test_deletion_vector_roaring_bytes_max_concurrent_is_clamped(max_concurrent):
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
+    dt = DeltaTable(_DV_TABLE_PATH)
     out = dt.deletion_vector_roaring_bytes(
         dt.deletion_vectors(), max_concurrent=max_concurrent
     ).read_all()
@@ -1240,7 +1256,7 @@ def test_deletion_vector_roaring_bytes_max_concurrent_is_clamped(max_concurrent)
 
 
 def test_deletion_vectors_include_all_files_on_table_without_dvs():
-    dt = DeltaTable("../crates/test/tests/data/simple_table")
+    dt = DeltaTable(_SIMPLE_TABLE_PATH)
     tbl = dt.deletion_vectors(include_all_files=True).read_all()
 
     assert set(tbl["file_uri"].to_pylist()) == set(dt.file_uris())
@@ -1250,22 +1266,21 @@ def test_deletion_vectors_include_all_files_on_table_without_dvs():
 
 
 def test_deletion_vectors_without_files_raises():
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small", without_files=True)
+    dt = DeltaTable(_DV_TABLE_PATH, without_files=True)
     with pytest.raises(DeltaError, match="Table is instantiated without files\\."):
         dt.deletion_vectors()
 
 
 def test_deletion_vector_roaring_bytes_without_files_raises():
-    table_path = "../crates/test/tests/data/table-with-dv-small"
-    dvs = DeltaTable(table_path).deletion_vectors()
+    dvs = DeltaTable(_DV_TABLE_PATH).deletion_vectors()
 
-    dt = DeltaTable(table_path, without_files=True)
+    dt = DeltaTable(_DV_TABLE_PATH, without_files=True)
     with pytest.raises(DeltaError, match="Table is instantiated without files\\."):
         dt.deletion_vector_roaring_bytes(dvs)
 
 
 def test_deletion_vectors_default_on_table_without_dvs_is_empty():
-    dt = DeltaTable("../crates/test/tests/data/table-without-dv-small")
+    dt = DeltaTable(_TABLE_WITHOUT_DV_PATH)
     tbl = dt.deletion_vectors().read_all()
 
     assert tbl.num_rows == 0
@@ -1283,9 +1298,8 @@ def test_deletion_vectors_default_on_table_without_dvs_is_empty():
 
 
 def test_deletion_vector_roaring_bytes_accepts_recordbatch_input():
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
-    meta_tbl = dt.deletion_vectors().read_all()
-    meta_batch = meta_tbl.to_batches()[0]
+    dt = DeltaTable(_DV_TABLE_PATH)
+    meta_batch = _dv_meta_batch()
 
     out = dt.deletion_vector_roaring_bytes(meta_batch).read_all()
     b = out["dv_roaring_bytes"].to_pylist()[0]
@@ -1293,9 +1307,8 @@ def test_deletion_vector_roaring_bytes_accepts_recordbatch_input():
 
 
 def test_deletion_vector_roaring_bytes_schema_mismatch_missing_column():
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
-    meta_tbl = dt.deletion_vectors().read_all()
-    meta_batch = meta_tbl.to_batches()[0]
+    dt = DeltaTable(_DV_TABLE_PATH)
+    meta_batch = _dv_meta_batch()
 
     idx = meta_batch.column_names.index("dv_cardinality")
     bad_batch = meta_batch.remove_column(idx)
@@ -1305,9 +1318,8 @@ def test_deletion_vector_roaring_bytes_schema_mismatch_missing_column():
 
 
 def test_deletion_vector_roaring_bytes_rejects_dv_unique_id_mismatch():
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
-    meta_tbl = dt.deletion_vectors().read_all()
-    meta_batch = meta_tbl.to_batches()[0]
+    dt = DeltaTable(_DV_TABLE_PATH)
+    meta_batch = _dv_meta_batch()
 
     idx = meta_batch.column_names.index("dv_unique_id")
     bad_uid_col = Array(
@@ -1328,9 +1340,8 @@ def test_deletion_vector_roaring_bytes_rejects_dv_unique_id_mismatch():
 
 
 def test_deletion_vector_roaring_bytes_null_dv_path_or_inline_errors_cleanly():
-    dt = DeltaTable("../crates/test/tests/data/table-with-dv-small")
-    meta_tbl = dt.deletion_vectors().read_all()
-    meta_batch = meta_tbl.to_batches()[0]
+    dt = DeltaTable(_DV_TABLE_PATH)
+    meta_batch = _dv_meta_batch()
 
     idx = meta_batch.column_names.index("dv_path_or_inline_dv")
     null_col = Array(
@@ -1351,42 +1362,32 @@ def test_deletion_vector_roaring_bytes_null_dv_path_or_inline_errors_cleanly():
         dt.deletion_vector_roaring_bytes(bad_batch).read_all()
 
 
-
 def test_deletion_vectors_streams_multiple_batches_for_small_batch_size():
-    dt = DeltaTable("../crates/test/tests/data/simple_table")
+    dt = DeltaTable(_SIMPLE_TABLE_PATH)
     reader = dt.deletion_vectors(include_all_files=True, batch_size=2)
 
-    row_counts = []
-    seen_file_uris = []
-    while True:
-        try:
-            batch = reader.read_next_batch()
-            row_counts.append(batch.num_rows)
-            seen_file_uris.extend(batch["file_uri"].to_pylist())
-        except StopIteration:
-            break
+    batches = _collect_batches(reader)
+    row_counts = [batch.num_rows for batch in batches]
+    seen_file_uris = [
+        file_uri for batch in batches for file_uri in batch["file_uri"].to_pylist()
+    ]
 
     assert row_counts == [2, 2, 1]
     assert set(seen_file_uris) == set(dt.file_uris())
 
 
 def test_deletion_vector_roaring_bytes_streams_multiple_batches_for_small_batch_size():
-    dt = DeltaTable("../crates/test/tests/data/simple_table")
+    dt = DeltaTable(_SIMPLE_TABLE_PATH)
     reader = dt.deletion_vector_roaring_bytes(
         dt.deletion_vectors(include_all_files=True), batch_size=2
     )
 
-    row_counts = []
-    seen_file_uris = []
-    seen_bytes = []
-    while True:
-        try:
-            batch = reader.read_next_batch()
-            row_counts.append(batch.num_rows)
-            seen_file_uris.extend(batch["file_uri"].to_pylist())
-            seen_bytes.extend(batch["dv_roaring_bytes"].to_pylist())
-        except StopIteration:
-            break
+    batches = _collect_batches(reader)
+    row_counts = [batch.num_rows for batch in batches]
+    seen_file_uris = [
+        file_uri for batch in batches for file_uri in batch["file_uri"].to_pylist()
+    ]
+    seen_bytes = [value for batch in batches for value in batch["dv_roaring_bytes"].to_pylist()]
 
     assert row_counts == [2, 2, 1]
     assert set(seen_file_uris) == set(dt.file_uris())
@@ -1394,7 +1395,7 @@ def test_deletion_vector_roaring_bytes_streams_multiple_batches_for_small_batch_
 
 
 def test_deletion_vector_roaring_bytes_on_table_without_dvs_returns_all_null():
-    dt = DeltaTable("../crates/test/tests/data/table-without-dv-small")
+    dt = DeltaTable(_TABLE_WITHOUT_DV_PATH)
     out = dt.deletion_vector_roaring_bytes(
         dt.deletion_vectors(include_all_files=True)
     ).read_all()

@@ -429,33 +429,15 @@ class DeltaTable:
         """
         Stream per-file Deletion Vector (DV) metadata as an Arrow RecordBatchReader.
 
-        This is a metadata-only operation (no object store IO). By default, only files with a DV
-        are returned. Use ``include_all_files=True`` to include all active files with DV columns set
-        to null when absent.
+        This is metadata-only (no object-store DV payload IO). By default, only files with DVs are
+        returned; set ``include_all_files=True`` to include all active files and emit null DV fields
+        when absent.
 
-        The output uses a sparse, protocol-faithful representation: DV descriptors + derived DV URI.
-        For DV payloads (portable roaring bytes), see :meth:`deletion_vector_roaring_bytes`.
+        Output columns: ``path``, ``file_uri``, DV descriptor fields
+        (``dv_storage_type``, ``dv_path_or_inline_dv``, ``dv_offset``, ``dv_size_in_bytes``,
+        ``dv_cardinality``), derived ``dv_file_uri``, and ``dv_unique_id``.
 
-        Output columns:
-            - ``path``: file path as recorded in the Delta log.
-            - ``file_uri``: fully-qualified file URI, consistent with :meth:`file_uris`.
-            - ``dv_storage_type``: ``"u" | "i" | "p"`` (relative, inline, absolute).
-            - ``dv_path_or_inline_dv``, ``dv_offset``, ``dv_size_in_bytes``, ``dv_cardinality``:
-              protocol descriptor fields.
-            - ``dv_file_uri``: derived absolute DV URI for ``"u"``/``"p"``; null for ``"i"``.
-            - ``dv_unique_id``: stable identifier for the DV descriptor.
-
-        PyArrow interop (zero-copy via the Arrow C-Stream interface):
-
-        .. code-block:: python
-
-            import pyarrow as pa
-
-            arro_reader = dt.deletion_vectors()
-            pa_reader = pa.RecordBatchReader._import_from_c_capsule(
-                arro_reader.__arrow_c_stream__()
-            )
-            pa_table = pa_reader.read_all()
+        For DV payload bytes, see :meth:`deletion_vector_roaring_bytes`.
 
         Args:
             include_all_files: If False (default), return only files with a DV; if True, return all
@@ -475,40 +457,18 @@ class DeltaTable:
         max_concurrent: int = 16,
     ) -> RecordBatchReader:
         """
-        Fetch DV payloads as portable roaring bytes in an Arrow RecordBatchReader.
+        Fetch DV payloads as portable roaring bytes.
 
-        Given the DV descriptors produced by :meth:`deletion_vectors`, this method reads/decodes the
-        DV payloads (object-store IO) and returns bytes in the Delta protocol's sparse format:
-        ``magic u32 (LE) + roaring portable serialization``.
+        Given descriptors from :meth:`deletion_vectors`, this method performs object-store IO and
+        returns ``dv_roaring_bytes`` in Delta's format:
+        ``[4-byte little-endian magic][portable roaring bytes]``.
 
-        Notes:
-            - ``dv_roaring_bytes`` is a compact, engine-agnostic encoding. Consumers should treat it
-              as opaque unless they implement roaring portable deserialization.
-            - The first 4 bytes are the little-endian magic ``1681511377``; the remainder is what a
-              roaring implementation typically expects as "portable" serialized bytes.
-            - Rows without a DV descriptor (null ``dv_storage_type``) return null
-              ``dv_unique_id``/``dv_roaring_bytes`` and do not perform any DV IO.
-            - Descriptor rows must match an active DV in the current table snapshot. If
-              ``dv_unique_id`` is provided, it must match the descriptor-derived unique id.
+        Rows without a DV descriptor return null ``dv_unique_id``/``dv_roaring_bytes`` and skip DV
+        IO. Descriptor rows must match an active DV in the current snapshot; if ``dv_unique_id`` is
+        provided, it must match the descriptor-derived unique id.
 
-        Output columns:
-            - ``path``: file path as recorded in the Delta log.
-            - ``file_uri``: fully-qualified file URI, consistent with :meth:`file_uris`.
-            - ``dv_unique_id``: stable identifier for the DV descriptor (null when DV absent).
-            - ``dv_size_in_bytes``: expected size of the returned payload (null when DV absent).
-            - ``dv_roaring_bytes``: portable roaring payload bytes (null when DV absent).
-
-        PyArrow interop (zero-copy via the Arrow C-Stream interface):
-
-        .. code-block:: python
-
-            import pyarrow as pa
-
-            arro_reader = dt.deletion_vector_roaring_bytes(dt.deletion_vectors())
-            pa_reader = pa.RecordBatchReader._import_from_c_capsule(
-                arro_reader.__arrow_c_stream__()
-            )
-            pa_table = pa_reader.read_all()
+        Output columns: ``path``, ``file_uri``, ``dv_unique_id``, ``dv_size_in_bytes``,
+        ``dv_roaring_bytes``.
 
         Args:
             dvs: Either an ``arro3.core.RecordBatchReader`` (streaming pipeline) or an

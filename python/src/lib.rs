@@ -461,6 +461,16 @@ impl RawDeltaTable {
         }
     }
 
+    fn validate_dv_params(&self, batch_size: usize) -> PyResult<()> {
+        if !self.has_files()? {
+            return Err(DeltaError::new_err("Table is instantiated without files."));
+        }
+        if batch_size == 0 {
+            return Err(PyValueError::new_err("batch_size must be greater than 0"));
+        }
+        Ok(())
+    }
+
     #[pyo3(signature = (include_all_files = false, batch_size = 1024))]
     pub fn deletion_vectors(
         &self,
@@ -468,12 +478,7 @@ impl RawDeltaTable {
         include_all_files: bool,
         batch_size: usize,
     ) -> PyResult<Arro3RecordBatchReader> {
-        if !self.has_files()? {
-            return Err(DeltaError::new_err("Table is instantiated without files."));
-        }
-        if batch_size == 0 {
-            return Err(PyValueError::new_err("batch_size must be greater than 0"));
-        }
+        self.validate_dv_params(batch_size)?;
 
         py.detach(|| {
             let log_store = self.log_store()?;
@@ -498,12 +503,7 @@ impl RawDeltaTable {
         batch_size: usize,
         max_concurrent: usize,
     ) -> PyResult<Arro3RecordBatchReader> {
-        if !self.has_files()? {
-            return Err(DeltaError::new_err("Table is instantiated without files."));
-        }
-        if batch_size == 0 {
-            return Err(PyValueError::new_err("batch_size must be greater than 0"));
-        }
+        self.validate_dv_params(batch_size)?;
 
         py.detach(|| {
             let log_store = self.log_store()?;

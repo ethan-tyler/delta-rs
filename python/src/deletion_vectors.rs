@@ -388,22 +388,9 @@ fn schema_error(
         parts.push(format!("wrong types: {items}"));
     }
 
-    let expected = [
-        "path: utf8",
-        "file_uri: utf8",
-        "dv_storage_type: utf8?",
-        "dv_path_or_inline_dv: utf8?",
-        "dv_offset: int32?",
-        "dv_size_in_bytes: int32?",
-        "dv_cardinality: int64?",
-        "dv_unique_id: utf8? (optional)",
-    ]
-    .join(", ");
-
     ArrowError::SchemaError(format!(
-        "Invalid deletion vector descriptor batch schema (expected {expected}). {}. Input schema: {:?}",
+        "Invalid deletion vector descriptor batch schema: {}. Input schema: {schema:?}",
         parts.join("; "),
-        schema
     ))
 }
 
@@ -739,7 +726,7 @@ mod tests {
     use super::kernel_dv::{DeletionVectorDescriptor, DeletionVectorStorageType};
     use bytes::Bytes;
     use delta_kernel::{DeltaResult, Error, FileMeta, FileSlice, StorageHandler};
-    use deltalake::arrow::array::{Int32Array, Int64Array, RecordBatchIterator, StringArray};
+    use deltalake::arrow::array::RecordBatchIterator;
     use deltalake::arrow::record_batch::RecordBatch;
     use roaring::RoaringTreemap;
     use url::Url;
@@ -804,21 +791,7 @@ mod tests {
     #[test]
     fn test_roaring_reader_rejects_zero_batch_size() {
         let schema = super::deletion_vectors_schema();
-        let batch = RecordBatch::try_new(
-            schema.clone(),
-            vec![
-                Arc::new(StringArray::from(Vec::<Option<&str>>::new())),
-                Arc::new(StringArray::from(Vec::<Option<&str>>::new())),
-                Arc::new(StringArray::from(Vec::<Option<&str>>::new())),
-                Arc::new(StringArray::from(Vec::<Option<&str>>::new())),
-                Arc::new(Int32Array::from(Vec::<Option<i32>>::new())),
-                Arc::new(Int32Array::from(Vec::<Option<i32>>::new())),
-                Arc::new(Int64Array::from(Vec::<Option<i64>>::new())),
-                Arc::new(StringArray::from(Vec::<Option<&str>>::new())),
-                Arc::new(StringArray::from(Vec::<Option<&str>>::new())),
-            ],
-        )
-        .unwrap();
+        let batch = RecordBatch::new_empty(schema.clone());
         let reader = RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema);
 
         let storage: Arc<dyn StorageHandler> = Arc::new(DummyStorage);
