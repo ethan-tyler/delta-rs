@@ -101,6 +101,13 @@ pub(crate) struct FileSelection {
 }
 
 impl FileSelection {
+    /// Create a selection from pre-normalized file IDs.
+    ///
+    /// This constructor does not normalize or validate the input IDs.
+    /// Callers with relative paths or Add actions should prefer:
+    /// - [`FileSelection::from_paths`]
+    /// - [`FileSelection::from_adds`]
+    /// - [`normalize_path_as_file_id`]
     pub(crate) fn new(file_ids: impl IntoIterator<Item = String>) -> Self {
         Self {
             file_ids: file_ids.into_iter().collect(),
@@ -206,6 +213,11 @@ pub(crate) fn normalize_path_as_file_id(
     normalize_path_as_file_id_with_table_root(path, &table_root_url, context)
 }
 
+/// Pre-filters file metadata batches for EagerSnapshot scans.
+///
+/// EagerSnapshot already has materialized file metadata, so we filter it before entering
+/// the scan pipeline. For lazy Snapshot scans, filtering is instead deferred to
+/// [`ScanFileStream`] during the replay phase since metadata is produced incrementally.
 fn filter_scan_file_batches_for_selection(
     files: &[RecordBatch],
     selection: &FileSelection,
@@ -446,6 +458,7 @@ mod tests {
         datasource::{physical_plan::FileScanConfig, source::DataSource},
         error::DataFusionError,
         physical_plan::{ExecutionPlanVisitor, collect_partitioned, visit_execution_plan},
+        prelude::{col, lit},
     };
     use datafusion_datasource::source::DataSourceExec;
     use futures::{StreamExt as _, TryStreamExt as _};
@@ -752,6 +765,56 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_scan_with_file_selection_strict_missing_files_errors_with_filters() -> TestResult
+    {
+        let log_store = TestTables::Simple.table_builder()?.build_storage()?;
+        let snapshot = Arc::new(Snapshot::try_new(&log_store, Default::default(), None).await?);
+        let table_root = snapshot.scan_builder().build()?.table_root().clone();
+
+        let session = Arc::new(create_session().into_inner());
+        let state = session.state_ref().read().clone();
+
+        let mut selected_file_ids: Vec<String> = snapshot
+            .file_views(log_store.as_ref(), None)
+            .take(1)
+            .map_ok(|view| table_root.join(view.path_raw()).unwrap().to_string())
+            .try_collect()
+            .await?;
+        selected_file_ids.push(
+            "https://urluser:urlpassword@example.com/__does_not_exist__.parquet?token=urltoken"
+                .to_string(),
+        );
+
+        let selection = FileSelection::new(selected_file_ids);
+        let provider = DeltaScan::builder()
+            .with_snapshot(snapshot)
+            .with_file_column(FILE_ID_COLUMN_DEFAULT)
+            .build()
+            .await?
+            .with_file_selection(selection);
+
+        let err = provider
+            .scan(&state, None, &[col("id").gt(lit(0_i64))], None)
+            .await
+            .unwrap_err();
+        let err_str = err.to_string();
+
+        assert!(
+            err_str.contains("File selection contains"),
+            "unexpected error: {err_str}"
+        );
+        assert!(
+            err_str.contains("missing files"),
+            "unexpected error: {err_str}"
+        );
+        assert!(!err_str.contains("urluser"));
+        assert!(!err_str.contains("urlpassword"));
+        assert!(!err_str.contains("urltoken"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_scan_with_file_selection_strict_missing_files_truncates_output() -> TestResult {
         let log_store = TestTables::Simple.table_builder()?.build_storage()?;
         let snapshot = Arc::new(Snapshot::try_new(&log_store, Default::default(), None).await?);
@@ -964,6 +1027,39 @@ mod tests {
         let from_paths = FileSelection::from_paths(["data/part-000.parquet"], &table_root)?;
 
         assert_eq!(from_adds.file_ids, from_paths.file_ids);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_file_selection_from_paths_normalizes_cloud_urls() -> TestResult {
+        let s3_root = Url::parse("s3://my-bucket/warehouse/my_table").unwrap();
+        let selection = FileSelection::from_paths(["part-00000-abc.snappy.parquet"], &s3_root)?;
+
+        assert!(
+            selection
+                .file_ids
+                .contains("s3://my-bucket/warehouse/my_table/part-00000-abc.snappy.parquet")
+        );
+
+        let az_root = Url::parse("az://container/path/to/table/").unwrap();
+        let selection = FileSelection::from_paths(["year=2024/part-00000.parquet"], &az_root)?;
+
+        assert!(
+            selection
+                .file_ids
+                .contains("az://container/path/to/table/year=2024/part-00000.parquet")
+        );
+
+        let gs_root = Url::parse("gs://bucket/delta_table").unwrap();
+        let selection =
+            FileSelection::from_paths(["gs://bucket/delta_table/data/part-000.parquet"], &gs_root)?;
+
+        assert!(
+            selection
+                .file_ids
+                .contains("gs://bucket/delta_table/data/part-000.parquet")
+        );
 
         Ok(())
     }
