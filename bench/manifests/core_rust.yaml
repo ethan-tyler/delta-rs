@@ -1,0 +1,282 @@
+id: core-rust
+description: P0 rust benchmark manifest for deterministic case ordering
+cases:
+- id: scan_full_narrow
+  target: scan
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:d27ccd9af5db8d95986e90983074cbdafebc9666285e933d3033b86542a12a3e
+  - type: schema_hash
+    value: sha256:5acd94043ee7628611eb2eece7f69a0d5b4c0a644d15a7ece2dce6344bda7af1
+- id: scan_projection_region
+  target: scan
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:086216dbb119955605f4bfe5b218e80272ccad0463ec173a8bec977cbfff3c49
+  - type: schema_hash
+    value: sha256:73cdbfcf7e8c18f6a8e0fc60b7dfe6c43f68e147708c0c8c829e6bf7d8fca362
+- id: scan_filter_flag
+  target: scan
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:6c6d482538b16ac43adebc31cda301f9483ad677b79d5ab70ae6d4b7c5c4ee25
+  - type: schema_hash
+    value: sha256:5acd94043ee7628611eb2eece7f69a0d5b4c0a644d15a7ece2dce6344bda7af1
+- id: scan_pruning_hit
+  target: scan
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:5ef7b8a21b333742fc17e83337a4b549acdf8275b77c6fb34743587b5100a7d3
+  - type: schema_hash
+    value: sha256:5acd94043ee7628611eb2eece7f69a0d5b4c0a644d15a7ece2dce6344bda7af1
+- id: scan_pruning_miss
+  target: scan
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:b6e7328f69cf0b5cff23287e99dac4e81ff0d283911955deae54ea6a61917e1d
+  - type: schema_hash
+    value: sha256:5acd94043ee7628611eb2eece7f69a0d5b4c0a644d15a7ece2dce6344bda7af1
+- id: write_append_small
+  target: write
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:8cd2442ffbaf92da4125fdcb533b0f1af34d576d02927d288481ae4c8997582c
+  - type: schema_hash
+    value: sha256:3e77d4cdeb1deaa1edf85c74c4c3a268ae7cdfd25a3f2ab4e691cff24c21a8c7
+- id: write_append_large
+  target: write
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:cb68f7711fdde8b3ae74e8583e8ac8d141cf7f4378a3da419c6339b422f216ad
+  - type: schema_hash
+    value: sha256:3e77d4cdeb1deaa1edf85c74c4c3a268ae7cdfd25a3f2ab4e691cff24c21a8c7
+- id: write_overwrite
+  target: write
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:283ac5ae489de751232be09966aa64107de00fdabe4b6b028e3ef9b3d4cc7930
+  - type: schema_hash
+    value: sha256:3e77d4cdeb1deaa1edf85c74c4c3a268ae7cdfd25a3f2ab4e691cff24c21a8c7
+- id: delete_1pct_localized
+  target: delete_update
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:6d0d7ce9d745c863ef8b6f544105f36f9f2a6295fead9dd67bbc129612292d83
+  - type: schema_hash
+    value: sha256:88976a18c30316ed24456055b10f135c4df325eded17e982e6e199d3856a3edc
+- id: delete_5pct_scattered
+  target: delete_update
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:090dee43a94edcc8b6995d688a73f72c204b2b9ebcb1b0f35fcac30b3e30be12
+  - type: schema_hash
+    value: sha256:88976a18c30316ed24456055b10f135c4df325eded17e982e6e199d3856a3edc
+- id: delete_50pct_broad
+  target: delete_update
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:ea3f7cb398284d1d79e4c5cc9eb7673ee03cf4d6d3b2f660d97b511850a8cd41
+  - type: schema_hash
+    value: sha256:88976a18c30316ed24456055b10f135c4df325eded17e982e6e199d3856a3edc
+- id: update_literal_1pct_localized
+  target: delete_update
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:44d53bde417fd77bd868630cd7f832469b4b14e445887f04f47846e7bd45e679
+  - type: schema_hash
+    value: sha256:88976a18c30316ed24456055b10f135c4df325eded17e982e6e199d3856a3edc
+- id: update_literal_5pct_scattered
+  target: delete_update
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:dd680d00b8c5e1f0d0239c0056ca677f26a13180a880fac53b5cc62fdc058da6
+  - type: schema_hash
+    value: sha256:88976a18c30316ed24456055b10f135c4df325eded17e982e6e199d3856a3edc
+- id: update_expr_50pct_broad
+  target: delete_update
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:8010dfcfa540351f80f63966e9aa8e2b8d1dd304f2ba8fb2522fa0ae142dc385
+  - type: schema_hash
+    value: sha256:88976a18c30316ed24456055b10f135c4df325eded17e982e6e199d3856a3edc
+- id: update_all_rows_expr
+  target: delete_update
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:2235d8ecdb3c194946d2155181449b08abf9128d2ebbdf5cdd63fce3521d6f14
+  - type: schema_hash
+    value: sha256:88976a18c30316ed24456055b10f135c4df325eded17e982e6e199d3856a3edc
+- id: merge_delete_5pct
+  target: merge
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:357646e8c35069a8e7734073e654b0e1c753d7d1590dcdbd0d67aa0b333e2784
+  - type: schema_hash
+    value: sha256:9db6bc96e82cfd6574a4081ea206b1c35aba785735a8e955d275d088a415c03c
+- id: merge_upsert_10pct_insert_10pct
+  target: merge
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:ea5d06e222953f0348c849d3f29aac3cc6bd9618b1536d4f0c0b7346cff18533
+  - type: schema_hash
+    value: sha256:9db6bc96e82cfd6574a4081ea206b1c35aba785735a8e955d275d088a415c03c
+- id: merge_upsert_10pct
+  target: merge
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:ea5d06e222953f0348c849d3f29aac3cc6bd9618b1536d4f0c0b7346cff18533
+  - type: schema_hash
+    value: sha256:9db6bc96e82cfd6574a4081ea206b1c35aba785735a8e955d275d088a415c03c
+- id: merge_upsert_50pct
+  target: merge
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:23c083a743c8151b321c2af51012f3e757f8b335b0125f64308125f59002a9c0
+  - type: schema_hash
+    value: sha256:9db6bc96e82cfd6574a4081ea206b1c35aba785735a8e955d275d088a415c03c
+- id: merge_upsert_90pct
+  target: merge
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:c7f272a3c6f3dc00d2962a7c3e8c48f3e2c57e987e86f1bce709bcc538f10d19
+  - type: schema_hash
+    value: sha256:9db6bc96e82cfd6574a4081ea206b1c35aba785735a8e955d275d088a415c03c
+- id: merge_localized_1pct
+  target: merge
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:cd36715b244b127b56222bdce2d5401b5732ffb4f351c198949d8dffc516b47e
+  - type: schema_hash
+    value: sha256:9db6bc96e82cfd6574a4081ea206b1c35aba785735a8e955d275d088a415c03c
+- id: metadata_load
+  target: metadata
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:f0656a8b2ff0a469a3ab0e03322190bdf9ffdfe44df0fa4a6640b9b5bc75a5c6
+  - type: schema_hash
+    value: sha256:295b42ee754a3ec916d4535729487c98e25a12e0f7297a120c50596315fa3592
+- id: metadata_time_travel_v0
+  target: metadata
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:ee3bff6c3e9d4f34f0ae07228bc1164902e8a3f5b6747231a69a4fca756312ae
+  - type: schema_hash
+    value: sha256:295b42ee754a3ec916d4535729487c98e25a12e0f7297a120c50596315fa3592
+- id: optimize_compact_small_files
+  target: optimize_vacuum
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:9afad141fe7fc19d9264eaccf6b3fece87dc512423a67001843c22c50295e14e
+  - type: schema_hash
+    value: sha256:69afe56a3a3e50d8a0d6729c49b5bf1a0c12e9a0322de72a899902673ee6fc3a
+- id: optimize_noop_already_compact
+  target: optimize_vacuum
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:526fd932c035872a157127f9e4f0aa08100efd98df4e1b2f3cc8a9a90c259d09
+  - type: schema_hash
+    value: sha256:69afe56a3a3e50d8a0d6729c49b5bf1a0c12e9a0322de72a899902673ee6fc3a
+- id: optimize_heavy_compaction
+  target: optimize_vacuum
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:3f64c73eb79065e9ccba325edf4402aa3346db72104c4fac9fe6c432e19efdd5
+  - type: schema_hash
+    value: sha256:69afe56a3a3e50d8a0d6729c49b5bf1a0c12e9a0322de72a899902673ee6fc3a
+- id: vacuum_dry_run_lite
+  target: optimize_vacuum
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:d3e1297964063ed6d306c977ef5afa11c36437287f5375330f38c67004872fa1
+  - type: schema_hash
+    value: sha256:c8b115babb97a1443d08ee890507c9c69a25fd88a3f03b88e810aaa79fcb17cc
+- id: vacuum_execute_lite
+  target: optimize_vacuum
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:946812dd6467af6e16ef037a0740a69a9918a6bf24a26f72e8f63170efbc2550
+  - type: schema_hash
+    value: sha256:c8b115babb97a1443d08ee890507c9c69a25fd88a3f03b88e810aaa79fcb17cc
+- id: tpcds_q03
+  target: tpcds
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:291eeba6d406202b7323f3f2770a5e5b2bbae908b826c64f5711716cf5b070ab
+  - type: schema_hash
+    value: sha256:4f6b46e03258819da42333251921ed3d0464302e64c71a25fe9f1fce7120bf3a
+- id: tpcds_q07
+  target: tpcds
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:6737ae41bb20a597eb9d5f0dafff00e79dcac7b0a817b009440bcba6651ee592
+  - type: schema_hash
+    value: sha256:b5574e46183d736338990949d30cb6bf4fc51f7427e55e3c83f8472abe0ed251
+- id: tpcds_q64
+  target: tpcds
+  runner: rust
+  enabled: true
+  assertions:
+  - type: exact_result_hash
+    value: sha256:a308a949b6b709f7b084f433b3a105e7f16aad55f5181e81af371d9c9df19745
+  - type: schema_hash
+    value: sha256:b6b365875e844b82f18fc2ca32127187cdd621dae55319aeebed19ccfb88ca76

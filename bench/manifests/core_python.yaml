@@ -1,0 +1,15 @@
+id: core-python
+description: P0 targeted Python interoperability manifest
+cases:
+  - id: pandas_roundtrip_smoke
+    target: interop_py
+    runner: python
+    enabled: true
+  - id: polars_roundtrip_smoke
+    target: interop_py
+    runner: python
+    enabled: true
+  - id: pyarrow_dataset_scan_perf
+    target: interop_py
+    runner: python
+    enabled: true

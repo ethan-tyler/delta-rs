@@ -1,0 +1,34 @@
+[package]
+name = "delta-bench"
+version = "0.1.0"
+publish = false
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Macro benchmark runner for delta-rs"
+
+[dependencies]
+deltalake-core = { path = "../core", features = ["datafusion", "cloud"] }
+
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time", "fs"] }
+chrono = { workspace = true, default-features = false, features = ["clock", "serde"] }
+url = { workspace = true }
+tempfile = { workspace = true }
+
+clap = { version = "4.5", features = ["derive", "env"] }
+anyhow = "1"
+rand = "0.8"
+rand_chacha = "0.3"
+sha2 = "0.10"
+serde_yaml = "0.9"
+
+[dev-dependencies]
+tempfile = { workspace = true }
