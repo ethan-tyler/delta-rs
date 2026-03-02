@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -117,4 +117,37 @@ pub fn load_manifest(path: impl AsRef<Path>) -> BenchResult<BenchmarkManifest> {
     serde_yaml::from_slice::<BenchmarkManifest>(&bytes).map_err(|error| {
         BenchError::InvalidArgument(format!("invalid manifest '{}': {error}", path.display()))
     })
+}
+
+pub fn benchmark_repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+pub fn ensure_required_manifests_exist() -> BenchResult<()> {
+    ensure_required_manifests_exist_under_root(&benchmark_repo_root())
+}
+
+pub fn ensure_required_manifests_exist_under_root(root: &Path) -> BenchResult<()> {
+    let required = [DEFAULT_RUST_MANIFEST_PATH, DEFAULT_PYTHON_MANIFEST_PATH];
+    let mut missing = Vec::new();
+    for relative in required {
+        let path = root.join(relative);
+        if !path.is_file() {
+            missing.push((relative, path));
+        }
+    }
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    let details = missing
+        .iter()
+        .map(|(relative, path)| format!("- {relative} (expected at {})", path.display()))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    Err(BenchError::InvalidArgument(format!(
+        "manifest preflight failed for delta-bench `list`/`run` commands:\n{details}\n\
+         ensure manifest files are present under `bench/manifests`."
+    )))
 }

@@ -6,7 +6,7 @@ use clap::Parser;
 use delta_bench::cli::{parse_storage_options, validate_label, Args, Command, RunnerMode};
 use delta_bench::data::fixtures::{generate_fixtures_with_profile, FixtureProfile};
 use delta_bench::error::BenchResult;
-use delta_bench::manifests::DatasetId;
+use delta_bench::manifests::{ensure_required_manifests_exist, DatasetId};
 use delta_bench::results::{BenchContext, BenchRunResult};
 use delta_bench::storage::{load_backend_profile_options, StorageConfig};
 use delta_bench::suites::{
@@ -19,6 +19,9 @@ use delta_bench::system::{
 #[tokio::main]
 async fn main() -> BenchResult<()> {
     let args = Args::parse();
+    if command_requires_manifest_preflight(&args.command) {
+        ensure_required_manifests_exist()?;
+    }
     let mut storage_options = load_backend_profile_options(args.backend_profile.as_deref())?;
     let cli_storage_options = parse_storage_options(&args.storage_options)?;
     storage_options.extend(cli_storage_options);
@@ -242,4 +245,8 @@ fn resolve_fixture_profile(dataset_id: Option<&str>) -> BenchResult<FixtureProfi
             FixtureProfile::Standard
         }
     })
+}
+
+fn command_requires_manifest_preflight(command: &Command) -> bool {
+    matches!(command, Command::List { .. } | Command::Run { .. })
 }

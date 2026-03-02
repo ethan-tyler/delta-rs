@@ -1,4 +1,6 @@
-use delta_bench::manifests::{load_manifest, DatasetId, ManifestAssertion};
+use delta_bench::manifests::{
+    ensure_required_manifests_exist_under_root, load_manifest, DatasetId, ManifestAssertion,
+};
 use delta_bench::suites::list_cases_for_target;
 use delta_bench::suites::tpcds::catalog::phase1_query_catalog;
 
@@ -219,4 +221,24 @@ fn p0_rust_manifest_includes_enabled_tpcds_cases() {
             "missing enabled TPC-DS manifest entry for case '{case_id}'"
         );
     }
+}
+
+#[test]
+fn required_manifest_preflight_reports_missing_files_with_actionable_message() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let err = ensure_required_manifests_exist_under_root(temp.path())
+        .expect_err("missing manifests should fail preflight");
+    let message = err.to_string();
+    assert!(
+        message.contains("core_rust.yaml"),
+        "missing rust manifest should be called out: {message}"
+    );
+    assert!(
+        message.contains("core_python.yaml"),
+        "missing python manifest should be called out: {message}"
+    );
+    assert!(
+        message.contains("bench/manifests"),
+        "error should explain where files belong: {message}"
+    );
 }
