@@ -17,6 +17,7 @@
 
 use std::sync::{Arc, LazyLock};
 
+use ::serde::Deserialize;
 use arrow::array::RecordBatch;
 use arrow::compute::{filter_record_batch, is_not_null};
 use arrow::datatypes::SchemaRef;
@@ -33,12 +34,14 @@ use delta_kernel::table_properties::TableProperties;
 use delta_kernel::{
     Engine, EvaluationHandler, Expression, ExpressionEvaluator, PredicateRef, Version,
 };
+use delta_kernel::{Error as KernelError, StorageHandler};
 use futures::future::ready;
 use futures::stream::{BoxStream, once};
 use futures::{StreamExt, TryStreamExt};
 use object_store::ObjectStore;
 use object_store::path::Path;
 use serde_json::Deserializer;
+use tracing::warn;
 use url::Url;
 
 use super::{Action, CommitInfo, Metadata, Protocol};
@@ -60,6 +63,32 @@ mod stream;
 
 pub(crate) static SCAN_ROW_ARROW_SCHEMA: LazyLock<arrow_schema::SchemaRef> =
     LazyLock::new(|| Arc::new(scan_row_schema().as_ref().try_into_arrow().unwrap()));
+
+#[derive(Deserialize)]
+struct LastCheckpointVersion {
+    version: Version,
+}
+
+fn try_read_last_checkpoint_version(
+    storage: &dyn StorageHandler,
+    log_root: &Url,
+) -> DeltaResult<Option<Version>> {
+    let file_path = log_root
+        .join("_last_checkpoint")
+        .map_err(|e| DeltaTableError::Generic(e.to_string()))?;
+    match storage.read_files(vec![(file_path, None)])?.next() {
+        Some(Ok(data)) => Ok(serde_json::from_slice::<LastCheckpointVersion>(&data)
+            .inspect_err(|e| warn!("invalid _last_checkpoint JSON: {e}"))
+            .ok()
+            .map(|hint| hint.version)),
+        Some(Err(KernelError::FileNotFound(_))) => Ok(None),
+        Some(Err(err)) => Err(err.into()),
+        None => {
+            warn!("empty _last_checkpoint file");
+            Ok(None)
+        }
+    }
+}
 
 /// A snapshot of a Delta table
 #[derive(Debug, Clone, PartialEq)]
@@ -149,25 +178,46 @@ impl Snapshot {
         engine: Arc<dyn Engine>,
         target_version: Option<u64>,
     ) -> DeltaResult<Arc<Self>> {
+        let current_version = self.version() as u64;
+        let current_checkpoint_version = self.checkpoint_version();
+
         if let Some(version) = target_version {
-            if version == self.version() as u64 {
-                return Ok(self);
-            }
-            if version < self.version() as u64 {
+            if version < current_version {
                 return Err(DeltaTableError::Generic("Cannot downgrade snapshot".into()));
+            }
+            if version == current_version {
+                if current_checkpoint_version == Some(current_version) {
+                    return Ok(self);
+                }
+                return self
+                    .refresh_same_version_checkpoint(engine, current_version)
+                    .await;
             }
         }
 
         let current = self.inner.clone();
+        let builder_engine = engine.clone();
         let snapshot = spawn_blocking_with_span(move || {
             let mut builder = KernelSnapshot::builder_from(current);
             if let Some(version) = target_version {
                 builder = builder.at_version(version);
             }
-            builder.build(engine.as_ref())
+            builder.build(builder_engine.as_ref())
         })
         .await
         .map_err(|e| DeltaTableError::Generic(e.to_string()))??;
+
+        let snapshot_checkpoint_version = snapshot.log_segment().checkpoint_version;
+        if snapshot.version() == current_version
+            && snapshot_checkpoint_version == current_checkpoint_version
+        {
+            if current_checkpoint_version != Some(current_version) {
+                return self
+                    .refresh_same_version_checkpoint(engine, current_version)
+                    .await;
+            }
+            return Ok(self);
+        }
 
         let schema = Arc::new(
             snapshot
@@ -187,6 +237,10 @@ impl Snapshot {
     /// Get the table version of the snapshot
     pub fn version(&self) -> i64 {
         self.inner.version() as i64
+    }
+
+    pub(crate) fn checkpoint_version(&self) -> Option<Version> {
+        self.inner.log_segment().checkpoint_version
     }
 
     /// Get the table schema of the snapshot
@@ -225,6 +279,41 @@ impl Snapshot {
 
     pub fn table_configuration(&self) -> &TableConfiguration {
         self.inner.table_configuration()
+    }
+
+    async fn refresh_same_version_checkpoint(
+        self: Arc<Self>,
+        engine: Arc<dyn Engine>,
+        current_version: Version,
+    ) -> DeltaResult<Arc<Self>> {
+        let log_root = self.inner.log_segment().log_root.clone();
+        let table_root = self.inner.table_root().clone();
+        let checkpoint_hint_log_root = log_root.clone();
+        let checkpoint_hint = spawn_blocking_with_span({
+            let engine = engine.clone();
+            move || {
+                try_read_last_checkpoint_version(
+                    engine.storage_handler().as_ref(),
+                    &checkpoint_hint_log_root,
+                )
+            }
+        })
+        .await
+        .map_err(|e| DeltaTableError::Generic(e.to_string()))??;
+
+        if checkpoint_hint != Some(current_version) {
+            return Ok(self);
+        }
+
+        Ok(Arc::new(
+            Snapshot::try_new_with_engine(
+                engine,
+                table_root,
+                self.config.clone(),
+                Some(current_version),
+            )
+            .await?,
+        ))
     }
 
     /// Get the active files for the current snapshot.
@@ -585,16 +674,20 @@ impl EagerSnapshot {
         target_version: Option<Version>,
     ) -> DeltaResult<()> {
         let current_version = self.version() as u64;
-        if Some(current_version) == target_version {
-            return Ok(());
-        }
+        let current_snapshot = self.snapshot.clone();
 
-        self.snapshot = self
+        let snapshot = self
             .snapshot
             .clone()
             .update(log_store.engine(None), target_version)
             .await?;
 
+        if Arc::ptr_eq(&snapshot, &current_snapshot) {
+            self.snapshot = snapshot;
+            return Ok(());
+        }
+
+        self.snapshot = snapshot;
         self.files = self
             .snapshot
             .files_from(
@@ -618,6 +711,10 @@ impl EagerSnapshot {
     /// Get the table version of the snapshot
     pub fn version(&self) -> i64 {
         self.snapshot.version()
+    }
+
+    pub(crate) fn checkpoint_version(&self) -> Option<Version> {
+        self.snapshot.checkpoint_version()
     }
 
     /// Get the timestamp of the given version
@@ -751,14 +848,20 @@ mod tests {
     use futures::TryStreamExt;
     use itertools::Itertools;
     use pretty_assertions::assert_eq;
+    use tempfile::TempDir;
+    use url::Url;
 
     // use super::log_segment::tests::{concurrent_checkpoint};
     // use super::replay::tests::test_log_replay;
     use super::*;
     use crate::{
         kernel::transaction::CommitData,
+        protocol::create_checkpoint_for,
         test_utils::{TestResult, TestTables, assert_batches_sorted_eq},
     };
+
+    const LATEST_NOT_CHECKPOINTED_VERSION: i64 = 3;
+    const PREVIOUS_CHECKPOINT_VERSION: i64 = 2;
 
     impl Snapshot {
         pub async fn new_test<'a>(
@@ -816,6 +919,33 @@ mod tests {
                 files,
             })
         }
+    }
+
+    fn clone_table(table: TestTables) -> TestResult<TempDir> {
+        let tmp_dir = tempfile::tempdir()?;
+        let options = fs_extra::dir::CopyOptions {
+            content_only: true,
+            ..Default::default()
+        };
+        fs_extra::dir::copy(table.as_path(), tmp_dir.path(), &options)?;
+        Ok(tmp_dir)
+    }
+
+    fn latest_not_checkpointed_log_store() -> TestResult<(TempDir, Arc<dyn LogStore>)> {
+        let tmp_dir = clone_table(TestTables::LatestNotCheckpointed)?;
+        let table_url = Url::from_directory_path(tmp_dir.path()).unwrap();
+        let log_store = crate::DeltaTableBuilder::from_url(table_url)?
+            .with_allow_http(true)
+            .build_storage()?;
+        Ok((tmp_dir, log_store))
+    }
+
+    fn eager_snapshot_file_paths(snapshot: &EagerSnapshot) -> Vec<String> {
+        snapshot
+            .log_data()
+            .iter()
+            .map(|file| file.path().to_string())
+            .collect()
     }
 
     #[tokio::test]
@@ -888,6 +1018,218 @@ mod tests {
             let num_files = batches.iter().map(|b| b.num_rows() as i64).sum::<i64>();
             assert_eq!(num_files, version);
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_snapshot_update_explicit_same_version_adopts_new_checkpoint() -> TestResult {
+        let (_tmp_dir, log_store) = latest_not_checkpointed_log_store()?;
+        let snapshot = Arc::new(
+            Snapshot::try_new(
+                log_store.as_ref(),
+                Default::default(),
+                Some(LATEST_NOT_CHECKPOINTED_VERSION),
+            )
+            .await?,
+        );
+
+        assert_eq!(snapshot.version(), LATEST_NOT_CHECKPOINTED_VERSION);
+        assert_eq!(
+            snapshot.checkpoint_version(),
+            Some(PREVIOUS_CHECKPOINT_VERSION as u64)
+        );
+
+        create_checkpoint_for(
+            LATEST_NOT_CHECKPOINTED_VERSION as u64,
+            log_store.as_ref(),
+            None,
+        )
+        .await?;
+
+        let updated = snapshot
+            .clone()
+            .update(
+                log_store.engine(None),
+                Some(LATEST_NOT_CHECKPOINTED_VERSION as u64),
+            )
+            .await?;
+
+        assert_eq!(updated.version(), LATEST_NOT_CHECKPOINTED_VERSION);
+        assert_eq!(
+            updated.checkpoint_version(),
+            Some(LATEST_NOT_CHECKPOINTED_VERSION as u64)
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_snapshot_update_latest_same_version_adopts_new_checkpoint() -> TestResult {
+        let (_tmp_dir, log_store) = latest_not_checkpointed_log_store()?;
+        let snapshot = Arc::new(
+            Snapshot::try_new(
+                log_store.as_ref(),
+                Default::default(),
+                Some(LATEST_NOT_CHECKPOINTED_VERSION),
+            )
+            .await?,
+        );
+
+        assert_eq!(
+            snapshot.checkpoint_version(),
+            Some(PREVIOUS_CHECKPOINT_VERSION as u64)
+        );
+
+        create_checkpoint_for(
+            LATEST_NOT_CHECKPOINTED_VERSION as u64,
+            log_store.as_ref(),
+            None,
+        )
+        .await?;
+
+        let updated = snapshot
+            .clone()
+            .update(log_store.engine(None), None)
+            .await?;
+
+        assert_eq!(updated.version(), LATEST_NOT_CHECKPOINTED_VERSION);
+        assert_eq!(
+            updated.checkpoint_version(),
+            Some(LATEST_NOT_CHECKPOINTED_VERSION as u64)
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eager_snapshot_update_explicit_same_version_adopts_new_checkpoint() -> TestResult
+    {
+        let (_tmp_dir, log_store) = latest_not_checkpointed_log_store()?;
+        let mut snapshot = EagerSnapshot::try_new(
+            log_store.as_ref(),
+            Default::default(),
+            Some(LATEST_NOT_CHECKPOINTED_VERSION),
+        )
+        .await?;
+        let original_paths = eager_snapshot_file_paths(&snapshot);
+
+        assert_eq!(
+            snapshot.checkpoint_version(),
+            Some(PREVIOUS_CHECKPOINT_VERSION as u64)
+        );
+
+        create_checkpoint_for(
+            LATEST_NOT_CHECKPOINTED_VERSION as u64,
+            log_store.as_ref(),
+            None,
+        )
+        .await?;
+
+        snapshot
+            .update(
+                log_store.as_ref(),
+                Some(LATEST_NOT_CHECKPOINTED_VERSION as u64),
+            )
+            .await?;
+
+        assert_eq!(snapshot.version(), LATEST_NOT_CHECKPOINTED_VERSION);
+        assert_eq!(
+            snapshot.checkpoint_version(),
+            Some(LATEST_NOT_CHECKPOINTED_VERSION as u64)
+        );
+        assert_eq!(eager_snapshot_file_paths(&snapshot), original_paths);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eager_snapshot_update_latest_same_version_adopts_new_checkpoint() -> TestResult {
+        let (_tmp_dir, log_store) = latest_not_checkpointed_log_store()?;
+        let mut snapshot = EagerSnapshot::try_new(
+            log_store.as_ref(),
+            Default::default(),
+            Some(LATEST_NOT_CHECKPOINTED_VERSION),
+        )
+        .await?;
+        let original_paths = eager_snapshot_file_paths(&snapshot);
+
+        assert_eq!(
+            snapshot.checkpoint_version(),
+            Some(PREVIOUS_CHECKPOINT_VERSION as u64)
+        );
+
+        create_checkpoint_for(
+            LATEST_NOT_CHECKPOINTED_VERSION as u64,
+            log_store.as_ref(),
+            None,
+        )
+        .await?;
+
+        snapshot.update(log_store.as_ref(), None).await?;
+
+        assert_eq!(snapshot.version(), LATEST_NOT_CHECKPOINTED_VERSION);
+        assert_eq!(
+            snapshot.checkpoint_version(),
+            Some(LATEST_NOT_CHECKPOINTED_VERSION as u64)
+        );
+        assert_eq!(eager_snapshot_file_paths(&snapshot), original_paths);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_same_version_checkpoint_update_is_idempotent() -> TestResult {
+        let (_tmp_dir, log_store) = latest_not_checkpointed_log_store()?;
+        create_checkpoint_for(
+            LATEST_NOT_CHECKPOINTED_VERSION as u64,
+            log_store.as_ref(),
+            None,
+        )
+        .await?;
+
+        let snapshot = Arc::new(
+            Snapshot::try_new(
+                log_store.as_ref(),
+                Default::default(),
+                Some(LATEST_NOT_CHECKPOINTED_VERSION),
+            )
+            .await?,
+        );
+        assert_eq!(
+            snapshot.checkpoint_version(),
+            Some(LATEST_NOT_CHECKPOINTED_VERSION as u64)
+        );
+
+        let updated = snapshot
+            .clone()
+            .update(
+                log_store.engine(None),
+                Some(LATEST_NOT_CHECKPOINTED_VERSION as u64),
+            )
+            .await?;
+        assert!(Arc::ptr_eq(&snapshot, &updated));
+
+        let mut eager_snapshot = EagerSnapshot::try_new(
+            log_store.as_ref(),
+            Default::default(),
+            Some(LATEST_NOT_CHECKPOINTED_VERSION),
+        )
+        .await?;
+        let original_snapshot = eager_snapshot.snapshot.clone();
+        let original_files_ptr = eager_snapshot.files.as_ptr();
+        let original_paths = eager_snapshot_file_paths(&eager_snapshot);
+
+        eager_snapshot
+            .update(
+                log_store.as_ref(),
+                Some(LATEST_NOT_CHECKPOINTED_VERSION as u64),
+            )
+            .await?;
+
+        assert!(Arc::ptr_eq(&original_snapshot, &eager_snapshot.snapshot));
+        assert_eq!(original_files_ptr, eager_snapshot.files.as_ptr());
+        assert_eq!(eager_snapshot_file_paths(&eager_snapshot), original_paths);
 
         Ok(())
     }
