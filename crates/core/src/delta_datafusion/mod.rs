@@ -632,8 +632,9 @@ mod tests {
     use futures::{StreamExt, TryStreamExt, stream::BoxStream};
     use object_store::ObjectMeta;
     use object_store::{
-        GetOptions, GetResult, ListResult, MultipartUpload, ObjectStore, PutMultipartOptions,
-        PutOptions, PutPayload, PutResult, path::Path,
+        CopyOptions, GetOptions, GetRange as ObjectStoreGetRange, GetResult, ListResult,
+        ObjectStore, PutMultipartOptions, PutOptions, PutPayload, PutResult, RenameOptions,
+        path::Path,
     };
     use serde_json::json;
     use std::fmt::{self, Debug, Display, Formatter};
@@ -1580,14 +1581,6 @@ mod tests {
     // Currently only read operations are recorded. Extend as necessary.
     #[async_trait::async_trait]
     impl ObjectStore for RecordingObjectStore {
-        async fn put(
-            &self,
-            location: &Path,
-            payload: PutPayload,
-        ) -> object_store::Result<PutResult> {
-            self.inner.put(location, payload).await
-        }
-
         async fn put_opts(
             &self,
             location: &Path,
@@ -1597,26 +1590,12 @@ mod tests {
             self.inner.put_opts(location, payload, opts).await
         }
 
-        async fn put_multipart(
-            &self,
-            location: &Path,
-        ) -> object_store::Result<Box<dyn MultipartUpload>> {
-            self.inner.put_multipart(location).await
-        }
-
         async fn put_multipart_opts(
             &self,
             location: &Path,
             opts: PutMultipartOptions,
-        ) -> object_store::Result<Box<dyn MultipartUpload>> {
+        ) -> object_store::Result<Box<dyn object_store::MultipartUpload>> {
             self.inner.put_multipart_opts(location, opts).await
-        }
-
-        async fn get(&self, location: &Path) -> object_store::Result<GetResult> {
-            self.operations
-                .send(ObjectStoreOperation::Get(location.into()))
-                .unwrap();
-            self.inner.get(location).await
         }
 
         async fn get_opts(
@@ -1624,24 +1603,23 @@ mod tests {
             location: &Path,
             options: GetOptions,
         ) -> object_store::Result<GetResult> {
-            self.operations
-                .send(ObjectStoreOperation::GetOpts(location.into()))
-                .unwrap();
+            let is_plain_get = options.if_match.is_none()
+                && options.if_none_match.is_none()
+                && options.if_modified_since.is_none()
+                && options.if_unmodified_since.is_none()
+                && options.range.is_none()
+                && options.version.is_none()
+                && !options.head;
+            let operation = match options.range.as_ref() {
+                Some(ObjectStoreGetRange::Bounded(range)) => {
+                    ObjectStoreOperation::GetRange(location.into(), range.clone())
+                }
+                Some(_) => ObjectStoreOperation::GetOpts(location.into()),
+                None if is_plain_get => ObjectStoreOperation::Get(location.into()),
+                None => ObjectStoreOperation::GetOpts(location.into()),
+            };
+            self.operations.send(operation).unwrap();
             self.inner.get_opts(location, options).await
-        }
-
-        async fn get_range(
-            &self,
-            location: &Path,
-            range: Range<u64>,
-        ) -> object_store::Result<Bytes> {
-            self.operations
-                .send(ObjectStoreOperation::GetRange(
-                    location.into(),
-                    range.clone(),
-                ))
-                .unwrap();
-            self.inner.get_range(location, range).await
         }
 
         async fn get_ranges(
@@ -1658,18 +1636,10 @@ mod tests {
             self.inner.get_ranges(location, ranges).await
         }
 
-        async fn head(&self, location: &Path) -> object_store::Result<ObjectMeta> {
-            self.inner.head(location).await
-        }
-
-        async fn delete(&self, location: &Path) -> object_store::Result<()> {
-            self.inner.delete(location).await
-        }
-
-        fn delete_stream<'a>(
-            &'a self,
-            locations: BoxStream<'a, object_store::Result<Path>>,
-        ) -> BoxStream<'a, object_store::Result<Path>> {
+        fn delete_stream(
+            &self,
+            locations: BoxStream<'static, object_store::Result<Path>>,
+        ) -> BoxStream<'static, object_store::Result<Path>> {
             self.inner.delete_stream(locations)
         }
 
@@ -1695,20 +1665,22 @@ mod tests {
             self.inner.list_with_delimiter(prefix).await
         }
 
-        async fn copy(&self, from: &Path, to: &Path) -> object_store::Result<()> {
-            self.inner.copy(from, to).await
+        async fn copy_opts(
+            &self,
+            from: &Path,
+            to: &Path,
+            options: CopyOptions,
+        ) -> object_store::Result<()> {
+            self.inner.copy_opts(from, to, options).await
         }
 
-        async fn rename(&self, from: &Path, to: &Path) -> object_store::Result<()> {
-            self.inner.rename(from, to).await
-        }
-
-        async fn copy_if_not_exists(&self, from: &Path, to: &Path) -> object_store::Result<()> {
-            self.inner.copy_if_not_exists(from, to).await
-        }
-
-        async fn rename_if_not_exists(&self, from: &Path, to: &Path) -> object_store::Result<()> {
-            self.inner.rename_if_not_exists(from, to).await
+        async fn rename_opts(
+            &self,
+            from: &Path,
+            to: &Path,
+            options: RenameOptions,
+        ) -> object_store::Result<()> {
+            self.inner.rename_opts(from, to, options).await
         }
     }
 }

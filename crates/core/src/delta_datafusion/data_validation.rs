@@ -357,7 +357,7 @@ pub struct DataValidationExec {
     check_expression: Arc<dyn PhysicalExpr>,
     /// Plan properties including the schema after validation
     /// (may have updated nullability)
-    properties: PlanProperties,
+    properties: Arc<PlanProperties>,
 }
 
 impl DataValidationExec {
@@ -408,12 +408,12 @@ impl DataValidationExec {
             );
         }
         let schema = validated_schema.unwrap_or_else(|| input.schema());
-        let properties = PlanProperties::new(
+        let properties = Arc::new(PlanProperties::new(
             EquivalenceProperties::new(schema),
             input.properties().partitioning.clone(),
             input.properties().emission_type,
             input.properties().boundedness,
-        );
+        ));
         Ok(Self {
             input,
             check_expression,
@@ -447,7 +447,7 @@ impl ExecutionPlan for DataValidationExec {
         "DataValidationExec"
     }
 
-    fn properties(&self) -> &PlanProperties {
+    fn properties(&self) -> &Arc<PlanProperties> {
         &self.properties
     }
 
@@ -486,10 +486,6 @@ impl ExecutionPlan for DataValidationExec {
 
     fn partition_statistics(&self, partition: Option<usize>) -> Result<Statistics> {
         self.input.partition_statistics(partition)
-    }
-
-    fn statistics(&self) -> Result<Statistics> {
-        self.partition_statistics(None)
     }
 
     fn maintains_input_order(&self) -> Vec<bool> {

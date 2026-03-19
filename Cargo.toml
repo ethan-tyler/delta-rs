@@ -17,33 +17,33 @@ repository = "https://github.com/delta-io/delta.rs"
 
 [workspace.dependencies]
 delta_kernel = { version = "0.19.0", features = [
-    "arrow-57",
+    "arrow-58",
     "default-engine-rustls",
     "internal-api",
 ] }
 
 
 # arrow
-arrow = { version = "57" }
-arrow-arith = { version = "57" }
-arrow-array = { version = "57", features = ["chrono-tz"] }
-arrow-buffer = { version = "57" }
-arrow-cast = { version = "57" }
-arrow-ipc = { version = "57" }
-arrow-json = { version = "57" }
-arrow-ord = { version = "57" }
-arrow-row = { version = "57" }
-arrow-schema = { version = "57" }
-arrow-select = { version = "57" }
-object_store = { version = "0.12.1" }
-parquet = { version = "57" }
+arrow = { version = "58" }
+arrow-arith = { version = "58" }
+arrow-array = { version = "58", features = ["chrono-tz"] }
+arrow-buffer = { version = "58" }
+arrow-cast = { version = "58" }
+arrow-ipc = { version = "58" }
+arrow-json = { version = "58" }
+arrow-ord = { version = "58" }
+arrow-row = { version = "58" }
+arrow-schema = { version = "58" }
+arrow-select = { version = "58" }
+object_store = { version = "0.13.1" }
+parquet = { version = "58" }
 
-# datafusion 52.1
-datafusion = { version = "52.1.0" }
-datafusion-datasource = { version = "52.1.0" }
-datafusion-physical-expr-adapter = { version = "52.1.0" }
-datafusion-ffi = { version = "52.1.0" }
-datafusion-proto = { version = "52.1.0" }
+# datafusion 53 (temporarily sourced from apache/datafusion branch-53)
+datafusion = { version = "53.0.0" }
+datafusion-datasource = { version = "53.0.0" }
+datafusion-physical-expr-adapter = { version = "53.0.0" }
+datafusion-ffi = { version = "53.0.0" }
+datafusion-proto = { version = "53.0.0" }
 
 # serde
 serde = { version = "1.0.194", features = ["derive"] }
@@ -74,6 +74,46 @@ opentelemetry-otlp = { version = "0.31", features = ["http-proto"] }
 opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 num_cpus = { version = "1" }
+
+[patch.crates-io]
+# Temporary compatibility fork until upstream delta-kernel-rs ships Arrow 58 / object_store 0.13.
+# Remove these path patches once an official upstream branch or release provides the same support.
+delta_kernel = { git = "https://github.com/ethan-tyler/delta-kernel-rs.git", branch = "df53-arrow58-objectstore13-compat" }
+delta_kernel_derive = { git = "https://github.com/ethan-tyler/delta-kernel-rs.git", branch = "df53-arrow58-objectstore13-compat" }
+datafusion = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-catalog = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-catalog-listing = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-common = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-common-runtime = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-datasource = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-datasource-arrow = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-datasource-csv = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-datasource-json = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-datasource-parquet = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-doc = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-execution = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-expr = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-expr-common = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-ffi = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-functions = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-functions-aggregate = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-functions-aggregate-common = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-functions-nested = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-functions-table = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-functions-window = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-functions-window-common = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-macros = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-optimizer = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-physical-expr = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-physical-expr-adapter = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-physical-expr-common = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-physical-optimizer = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-physical-plan = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-proto = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-proto-common = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-pruning = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-session = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
+datafusion-sql = { git = "https://github.com/apache/datafusion.git", branch = "branch-53" }
 
 [workspace.metadata.typos]
 files.extend-exclude = ["CHANGELOG.md", "crates/benchmarks/queries/tpcds/*.sql"]

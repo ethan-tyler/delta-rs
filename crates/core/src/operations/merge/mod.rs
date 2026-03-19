@@ -44,7 +44,6 @@ use datafusion::datasource::provider_as_source;
 use datafusion::error::Result as DataFusionResult;
 use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::build_join_schema;
-use datafusion::logical_expr::execution_props::ExecutionProps;
 use datafusion::logical_expr::simplify::SimplifyContext;
 use datafusion::logical_expr::utils::split_conjunction_owned;
 use datafusion::logical_expr::{
@@ -1604,8 +1603,7 @@ fn remove_table_alias(expr: Expr, table_alias: &str) -> Expr {
 
 fn normalize_target_subset_filter(target_schema: DFSchemaRef, expr: Expr) -> DeltaResult<Expr> {
     let expr = coerce_predicate_literals(expr, target_schema.as_ref())?;
-    let props = ExecutionProps::new();
-    let simplify_context = SimplifyContext::new(&props).with_schema(target_schema);
+    let simplify_context = SimplifyContext::default().with_schema(target_schema);
     let simplifier = ExprSimplifier::new(simplify_context).with_max_cycles(10);
     Ok(simplifier.simplify(expr)?)
 }

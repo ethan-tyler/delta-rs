@@ -577,7 +577,7 @@ async fn get_stale_files(
 
 #[cfg(test)]
 mod tests {
-    use object_store::{PutPayload, local::LocalFileSystem, memory::InMemory};
+    use object_store::{ObjectStoreExt as _, PutPayload, local::LocalFileSystem, memory::InMemory};
 
     use super::*;
     use crate::{ensure_table_uri, open_table};
