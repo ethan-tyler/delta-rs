@@ -5,8 +5,10 @@ from typing import TYPE_CHECKING
 import pytest
 from arro3.core import Array, DataType, Field, Table
 
-from deltalake import DeltaTable, write_deltalake
+from deltalake import DeltaTable, WriterProperties, write_deltalake
 from deltalake.exceptions import DeltaError
+
+from ._utils import assert_delta_parquet_contract
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -509,6 +511,35 @@ def test_delete_unpartitioned_cdf(tmp_path, sample_data_pyarrow: "pa.Table"):
 
     assert os.path.exists(cdc_path), "_change_data doesn't exist"
     assert cdc_data == expected_data
+
+
+@pytest.mark.pyarrow
+def test_delete_cdf_writes_plain_string_schema_4579(
+    tmp_path,
+    sample_data_pyarrow: "pa.Table",
+):
+    import pyarrow.parquet as pq
+
+    write_deltalake(
+        tmp_path,
+        sample_data_pyarrow,
+        mode="append",
+        configuration={"delta.enableChangeDataFeed": "true"},
+    )
+    DeltaTable(tmp_path).delete(
+        "int64 > 2",
+        writer_properties=WriterProperties(compression="SNAPPY"),
+    )
+
+    cdc_files = sorted((tmp_path / "_change_data").rglob("*.parquet"))
+    assert len(cdc_files) == 1
+
+    parquet_file = pq.ParquetFile(cdc_files[0])
+    assert_delta_parquet_contract(
+        parquet_file,
+        string_field="utf8",
+        compression="SNAPPY",
+    )
 
 
 @pytest.mark.pyarrow

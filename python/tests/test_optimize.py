@@ -6,8 +6,10 @@ import pytest
 from arro3.core import Array, DataType, Table
 from arro3.core import Field as ArrowField
 
-from deltalake import CommitProperties, DeltaTable, write_deltalake
+from deltalake import CommitProperties, DeltaTable, WriterProperties, write_deltalake
 from deltalake.query import QueryBuilder
+
+from ._utils import active_parquet_path, assert_delta_parquet_contract
 
 
 def ordered_range_table(start: int, rows: int) -> Table:
@@ -497,6 +499,49 @@ def test_optimize_schema_evolved_3185(tmp_path):
     assert dt.version() == 2
     last_action = dt.history(1)[0]
     assert last_action["operation"] == "OPTIMIZE"
+
+
+@pytest.mark.pyarrow
+def test_optimize_compact_writes_plain_string_schema_4579(
+    tmp_path: pathlib.Path,
+):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    table = pa.table(
+        {
+            "value": pa.array(list(range(40)), type=pa.int64()),
+            "device": pa.array(
+                ["A" if i % 2 == 0 else "B" for i in range(40)],
+                type=pa.string(),
+            ),
+        }
+    )
+    write_deltalake(tmp_path, table.slice(0, 20), mode="append")
+    write_deltalake(tmp_path, table.slice(20, 20), mode="append")
+
+    dt = DeltaTable(tmp_path)
+    dt.delete(
+        "value < 10",
+        writer_properties=WriterProperties(compression="SNAPPY"),
+    )
+    assert len(dt.file_uris()) == 2
+
+    metrics = dt.optimize.compact(
+        writer_properties=WriterProperties(compression="SNAPPY"),
+    )
+    assert metrics["numFilesAdded"] == 1
+    assert metrics["numFilesRemoved"] == 2
+
+    parquet_file = pq.ParquetFile(active_parquet_path(dt))
+    assert_delta_parquet_contract(
+        parquet_file,
+        string_field="device",
+        compression="SNAPPY",
+    )
+
+    filtered = DeltaTable(tmp_path).to_pyarrow_table(filters=[("device", "=", "A")])
+    assert filtered.num_rows == 15
 
 
 def test_compact_with_spill_parameters(

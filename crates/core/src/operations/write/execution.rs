@@ -477,21 +477,35 @@ fn drop_internal_column(
     Ok(Arc::new(ProjectionExec::try_new(expressions, plan)?))
 }
 
+pub(crate) struct WriteExecPlanOptions {
+    pub operation_id: Option<Uuid>,
+    pub target_file_size: Option<NonZeroU64>,
+    pub writer_properties: Option<WriterProperties>,
+    pub write_as_cdc: bool,
+}
+
 pub(crate) async fn write_exec_plan(
     session: &dyn Session,
     log_store: &dyn LogStore,
     table_config: &TableConfiguration,
     exec: Arc<dyn ExecutionPlan>,
-    operation_id: Option<Uuid>,
-    target_file_size: Option<NonZeroU64>,
-    write_as_cdc: bool,
+    options: WriteExecPlanOptions,
 ) -> DeltaResult<(Vec<Action>, WriteExecutionPlanMetrics)> {
-    let writer_properties = session
-        .config_options()
-        .execution
-        .parquet
-        .into_writer_properties_builder()?
-        .build();
+    let WriteExecPlanOptions {
+        operation_id,
+        target_file_size,
+        writer_properties,
+        write_as_cdc,
+    } = options;
+    let writer_properties = match writer_properties {
+        Some(writer_properties) => writer_properties,
+        None => session
+            .config_options()
+            .execution
+            .parquet
+            .into_writer_properties_builder()?
+            .build(),
+    };
     let stats_config = WriterStatsConfig::from_config(table_config);
     let object_store = log_store.object_store(operation_id);
     let sink_config = WriteSinkConfig {

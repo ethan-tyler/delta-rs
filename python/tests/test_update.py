@@ -7,6 +7,8 @@ from arro3.core import Field as ArrowField
 from deltalake import CommitProperties, DeltaTable, write_deltalake
 from deltalake.query import QueryBuilder
 
+from ._utils import active_parquet_path, assert_delta_parquet_contract
+
 
 @pytest.fixture()
 def sample_table():
@@ -80,6 +82,38 @@ def test_update_with_predicate(tmp_path: pathlib.Path, sample_table: Table):
     assert last_action["operation"] == "UPDATE"
     assert last_action["userName"] == "John Doe"
     assert result == expected
+
+
+@pytest.mark.pyarrow
+def test_update_row_rewrite_writes_plain_string_schema_4579(
+    tmp_path: pathlib.Path,
+):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    write_deltalake(
+        tmp_path,
+        pa.table(
+            {
+                "value": pa.array(list(range(20)), type=pa.int64()),
+                "device": pa.array(
+                    ["A" if i % 2 == 0 else "B" for i in range(20)],
+                    type=pa.string(),
+                ),
+            }
+        ),
+    )
+
+    DeltaTable(tmp_path).update(
+        updates={"value": "value + 100"},
+        predicate="value < 10",
+    )
+
+    parquet_file = pq.ParquetFile(active_parquet_path(DeltaTable(tmp_path)))
+    assert_delta_parquet_contract(parquet_file, string_field="device")
+
+    filtered = DeltaTable(tmp_path).to_pyarrow_table(filters=[("device", "=", "A")])
+    assert filtered.num_rows == 10
 
 
 def test_update_wo_predicate(tmp_path: pathlib.Path, sample_table: Table):

@@ -22,7 +22,7 @@ use tracing::*;
 use crate::errors::{DeltaResult, DeltaTableError};
 use crate::kernel::{Add, PartitionsExt};
 use crate::logstore::ObjectStoreRef;
-use crate::parquet_utils::default_writer_properties;
+use crate::parquet_utils::{default_writer_properties, delta_arrow_writer_options};
 use crate::writer::record_batch::{PartitionResult, divide_by_partition_values};
 use crate::writer::stats::create_add;
 use crate::writer::utils::{
@@ -381,10 +381,10 @@ impl LazyArrowWriter {
                     )
                     .with_max_concurrency(config.max_concurrency_tasks),
                 );
-                let mut arrow_writer = AsyncArrowWriter::try_new(
+                let mut arrow_writer = AsyncArrowWriter::try_new_with_options(
                     writer,
                     config.file_schema.clone(),
-                    Some(config.writer_properties.clone()),
+                    delta_arrow_writer_options(config.writer_properties.clone()),
                 )?;
                 arrow_writer.write(batch).await?;
                 *self = LazyArrowWriter::Writing(path.clone(), arrow_writer);

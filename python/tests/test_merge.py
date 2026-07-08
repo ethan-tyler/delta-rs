@@ -18,6 +18,8 @@ from deltalake.exceptions import DeltaError
 from deltalake.query import QueryBuilder
 from deltalake.schema import PrimitiveType
 
+from ._utils import active_parquet_path, assert_delta_parquet_contract
+
 
 @pytest.mark.parametrize("streaming", (True, False))
 def test_merge_when_matched_delete_wo_predicate(
@@ -2326,6 +2328,49 @@ def test_merge_boolean_target_predicate_4490(tmp_path: pathlib.Path, streaming: 
         }
     )
     assert actual == expected
+
+
+@pytest.mark.pyarrow
+@pytest.mark.parametrize("streaming", (True, False))
+def test_merge_rewrite_writes_plain_string_schema_4579(
+    tmp_path: pathlib.Path,
+    streaming: bool,
+):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    write_deltalake(
+        tmp_path,
+        pa.table(
+            {
+                "id": pa.array([1, 2], type=pa.int64()),
+                "device": pa.array(["A", "B"], type=pa.string()),
+                "value": pa.array([10, 20], type=pa.int64()),
+            }
+        ),
+    )
+
+    dt = DeltaTable(tmp_path)
+    dt.merge(
+        source=pa.table(
+            {
+                "id": pa.array([1], type=pa.int64()),
+                "device": pa.array(["A"], type=pa.string()),
+                "value": pa.array([100], type=pa.int64()),
+            }
+        ),
+        predicate="target.id = source.id",
+        source_alias="source",
+        target_alias="target",
+        streamed_exec=streaming,
+    ).when_matched_update(updates={"value": "source.value"}).execute()
+
+    parquet_file = pq.ParquetFile(active_parquet_path(dt))
+    assert_delta_parquet_contract(parquet_file, string_field="device")
+
+    filtered = dt.to_pyarrow_table(filters=[("device", "=", "A")])
+    assert filtered.num_rows == 1
+    assert filtered.column("value").to_pylist() == [100]
 
 
 @pytest.mark.parametrize("streaming", (True, False))

@@ -5,8 +5,10 @@ from typing import TYPE_CHECKING
 import pytest
 from arro3.core import Array, DataType, Field, Table
 
-from deltalake import CommitProperties, write_deltalake
+from deltalake import CommitProperties, WriterProperties, write_deltalake
 from deltalake.table import DeltaTable
+
+from ._utils import active_parquet_path, assert_delta_parquet_contract
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -138,6 +140,66 @@ def test_delete_some_rows(existing_table: DeltaTable):
 
     table = existing_table.to_pyarrow_table()
     assert table.equals(expected_table)
+
+
+@pytest.mark.pyarrow
+def test_delete_row_rewrite_uses_writer_properties_4579(
+    tmp_path: pathlib.Path,
+):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    write_deltalake(
+        tmp_path,
+        pa.table(
+            {
+                "value": pa.array(list(range(20)), type=pa.int64()),
+                "device": pa.array(
+                    ["A" if i % 2 == 0 else "B" for i in range(20)],
+                    type=pa.string(),
+                ),
+            }
+        ),
+    )
+
+    metrics = DeltaTable(tmp_path).delete(
+        "value < 10",
+        writer_properties=WriterProperties(compression="SNAPPY"),
+    )
+    assert metrics["num_added_files"] == 1
+    assert metrics["num_removed_files"] == 1
+
+    parquet_file = pq.ParquetFile(active_parquet_path(DeltaTable(tmp_path)))
+    assert_delta_parquet_contract(parquet_file, compression="SNAPPY")
+
+
+@pytest.mark.pyarrow
+def test_delete_row_rewrite_writes_plain_string_schema_4579(
+    tmp_path: pathlib.Path,
+):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    write_deltalake(
+        tmp_path,
+        pa.table(
+            {
+                "value": pa.array(list(range(20)), type=pa.int64()),
+                "device": pa.array(
+                    ["A" if i % 2 == 0 else "B" for i in range(20)],
+                    type=pa.string(),
+                ),
+            }
+        ),
+    )
+
+    DeltaTable(tmp_path).delete("value < 10")
+
+    parquet_file = pq.ParquetFile(active_parquet_path(DeltaTable(tmp_path)))
+    assert_delta_parquet_contract(parquet_file, string_field="device")
+
+    filtered = DeltaTable(tmp_path).to_pyarrow_table(filters=[("device", "=", "A")])
+    assert filtered.num_rows == 5
 
 
 def test_delete_stats_columns_stats_provided(tmp_path: pathlib.Path):

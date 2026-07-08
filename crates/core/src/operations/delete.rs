@@ -81,7 +81,7 @@ use crate::kernel::{
 use crate::logstore::{LogStore, LogStoreRef};
 use crate::operations::CustomExecuteHandler;
 use crate::operations::cdc::CDC_COLUMN_NAME;
-use crate::operations::write::execution::write_exec_plan;
+use crate::operations::write::execution::{WriteExecPlanOptions, write_exec_plan};
 use crate::protocol::DeltaOperation;
 use crate::table::config::TablePropertiesExt as _;
 use crate::table::state::DeltaTableState;
@@ -328,6 +328,7 @@ impl std::future::IntoFuture for DeleteBuilder {
             let operation = DeltaOperation::Delete {
                 predicate: predicate.as_ref().map(fmt_expr_to_sql).transpose()?,
             };
+            let writer_properties = this.writer_properties.take();
 
             let (actions, metrics) = execute(
                 predicate,
@@ -335,6 +336,7 @@ impl std::future::IntoFuture for DeleteBuilder {
                 snapshot.clone(),
                 &session,
                 operation_id,
+                writer_properties,
             )
             .await?;
 
@@ -426,6 +428,7 @@ async fn execute(
     snapshot: EagerSnapshot,
     session: &dyn Session,
     operation_id: Uuid,
+    writer_properties: Option<WriterProperties>,
 ) -> DeltaResult<(Vec<Action>, DeleteMetrics)> {
     let exec_start = Instant::now();
     let mut metrics = DeleteMetrics {
@@ -623,9 +626,12 @@ async fn execute(
         log_store.as_ref(),
         snapshot.table_configuration(),
         exec.clone(),
-        Some(operation_id),
-        target_file_size,
-        write_cdc,
+        WriteExecPlanOptions {
+            operation_id: Some(operation_id),
+            target_file_size,
+            writer_properties,
+            write_as_cdc: write_cdc,
+        },
     )
     .await?;
 
@@ -735,6 +741,9 @@ mod tests {
     use delta_kernel::schema::PrimitiveType;
     use delta_kernel::schema::StructType;
     use object_store::ObjectStoreExt as _;
+    use parquet::arrow::ParquetRecordBatchStreamBuilder;
+    use parquet::arrow::async_reader::ParquetObjectReader;
+    use parquet::basic::Compression;
     use pretty_assertions::assert_eq;
     use rstest::rstest;
     use serde_json::json;
@@ -751,6 +760,21 @@ mod tests {
             .unwrap();
         assert_eq!(table.version(), Some(0));
         table
+    }
+
+    async fn active_parquet_metadata(
+        table: &DeltaTable,
+    ) -> Result<parquet::file::metadata::ParquetMetaData, Box<dyn std::error::Error>> {
+        let files = table.get_files_by_partitions(&[]).await?;
+        assert_eq!(files.len(), 1);
+
+        let object_store = table.object_store();
+        let file = object_store.head(&files[0]).await?;
+        let file_reader =
+            ParquetObjectReader::new(object_store, files[0].clone()).with_file_size(file.size);
+        let builder = ParquetRecordBatchStreamBuilder::new(file_reader).await?;
+
+        Ok(builder.metadata().as_ref().clone())
     }
 
     fn metadata_only_add_with_partitions(
@@ -2160,6 +2184,89 @@ mod tests {
         }
         values.sort();
         assert_eq!(values, vec![0, 2]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_delete_row_rewrite_uses_writer_properties_4579()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("device", DataType::Utf8, false),
+            Field::new("value", DataType::Int32, false),
+        ]));
+
+        let batch = RecordBatch::try_new(
+            Arc::clone(&schema),
+            vec![
+                Arc::new(StringArray::from(vec![
+                    "A", "B", "A", "B", "A", "B", "A", "B",
+                ])),
+                Arc::new(Int32Array::from(vec![0, 1, 2, 3, 10, 11, 12, 13])),
+            ],
+        )?;
+
+        let table = DeltaTable::new_in_memory().write(vec![batch]).await?;
+
+        let (table, metrics) = table
+            .delete()
+            .with_predicate("value < 10")
+            .with_writer_properties(
+                WriterProperties::builder()
+                    .set_compression(Compression::SNAPPY)
+                    .build(),
+            )
+            .await?;
+
+        assert_eq!(metrics.num_added_files, 1);
+        assert_eq!(metrics.num_removed_files, 1);
+
+        let metadata = active_parquet_metadata(&table).await?;
+        for row_group_index in 0..metadata.num_row_groups() {
+            let row_group = metadata.row_group(row_group_index);
+            for column_index in 0..row_group.num_columns() {
+                assert_eq!(
+                    row_group.column(column_index).compression(),
+                    Compression::SNAPPY
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_delete_row_rewrite_skips_arrow_schema_4579()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("device", DataType::Utf8, false),
+            Field::new("value", DataType::Int32, false),
+        ]));
+
+        let batch = RecordBatch::try_new(
+            Arc::clone(&schema),
+            vec![
+                Arc::new(StringArray::from(vec![
+                    "A", "B", "A", "B", "A", "B", "A", "B",
+                ])),
+                Arc::new(Int32Array::from(vec![0, 1, 2, 3, 10, 11, 12, 13])),
+            ],
+        )?;
+
+        let table = DeltaTable::new_in_memory().write(vec![batch]).await?;
+
+        let (table, metrics) = table.delete().with_predicate("value < 10").await?;
+
+        assert_eq!(metrics.num_added_files, 1);
+        assert_eq!(metrics.num_removed_files, 1);
+
+        let metadata = active_parquet_metadata(&table).await?;
+        let has_arrow_schema = metadata
+            .file_metadata()
+            .key_value_metadata()
+            .map(|entries| entries.iter().any(|entry| entry.key == "ARROW:schema"))
+            .unwrap_or(false);
+        assert!(!has_arrow_schema);
+
         Ok(())
     }
 
