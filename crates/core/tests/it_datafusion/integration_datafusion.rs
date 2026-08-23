@@ -81,18 +81,22 @@ fn string_value(array: &dyn Array, index: usize) -> &str {
 mod local {
     use super::*;
     use TableProviderFilterPushDown::Exact;
-    use datafusion::catalog::Session;
+    use datafusion::catalog::{ScanArgs, Session};
     use datafusion::common::assert_contains;
     use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
     use datafusion::datasource::source::DataSourceExec;
     use datafusion::logical_expr::{
         LogicalPlan, LogicalPlanBuilder, TableProviderFilterPushDown, TableScan, lit,
+        statistics::StatisticsRequest,
     };
     use datafusion::physical_plan::{collect_partitioned, displayable};
     use datafusion::prelude::{SessionConfig, col};
-    use datafusion::{common::stats::Precision, datasource::provider_as_source};
+    use datafusion::{
+        common::{ColumnStatistics, stats::Precision},
+        datasource::provider_as_source,
+    };
     use delta_kernel::engine::arrow_conversion::TryIntoKernel as _;
-    use deltalake_core::delta_datafusion::{DeltaScanExec, create_session};
+    use deltalake_core::delta_datafusion::{DeltaScanExec, DeltaSessionContext, create_session};
     use deltalake_core::{
         delta_datafusion::DeltaLogicalCodec, logstore::default_logstore, writer::JsonWriter,
     };
@@ -175,6 +179,553 @@ mod local {
         }
 
         (table_dir, table)
+    }
+
+    fn requested_stat_column(request: &StatisticsRequest) -> Option<&str> {
+        match request {
+            StatisticsRequest::Min(column)
+            | StatisticsRequest::Max(column)
+            | StatisticsRequest::NullCount(column) => Some(column.name.as_str()),
+            _ => None,
+        }
+    }
+
+    #[tokio::test]
+    async fn delta_session_requests_filter_and_sort_statistics() -> TestResult {
+        let schema = Arc::new(ArrowSchema::new(vec![
+            ArrowField::new("id", ArrowDataType::Int64, true),
+            ArrowField::new("value", ArrowDataType::Int64, true),
+        ]));
+        let batch = RecordBatch::try_new(
+            schema,
+            vec![
+                Arc::new(Int64Array::from(vec![1, 2, 3])),
+                Arc::new(Int64Array::from(vec![30, 20, 10])),
+            ],
+        )?;
+        let (_dir, table) = prepare_table(vec![batch], SaveMode::Append, Vec::new()).await;
+        let ctx = DeltaSessionContext::new().into_inner();
+        ctx.register_table("stats_table", table.table_provider().await?)?;
+
+        let plan = ctx
+            .sql("SELECT value FROM stats_table WHERE id > 0 ORDER BY value")
+            .await?
+            .into_optimized_plan()?;
+        let mut requests = None;
+        plan.apply(|node| {
+            if let LogicalPlan::TableScan(scan) = node {
+                requests = Some(scan.statistics_requests.clone());
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })?;
+        let requests = requests.expect("optimized plan must retain the Delta table scan");
+
+        assert!(requests.contains(&StatisticsRequest::RowCount));
+        assert!(requests.contains(&StatisticsRequest::TotalByteSize));
+        for column in ["id", "value"] {
+            let count = requests
+                .iter()
+                .filter(|request| requested_stat_column(request) == Some(column))
+                .count();
+            assert_eq!(count, 3, "expected three statistics for {column}");
+        }
+
+        let optimized_again = ctx.state().optimize(&plan)?;
+        let mut optimized_again_requests = None;
+        optimized_again.apply(|node| {
+            if let LogicalPlan::TableScan(scan) = node {
+                optimized_again_requests = Some(scan.statistics_requests.clone());
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })?;
+        assert_eq!(optimized_again_requests.as_ref(), Some(&requests));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delta_statistics_rule_traces_join_and_projection_aliases() -> TestResult {
+        let schema = Arc::new(ArrowSchema::new(vec![
+            ArrowField::new("id", ArrowDataType::Int64, true),
+            ArrowField::new("value", ArrowDataType::Int64, true),
+        ]));
+        let batch = RecordBatch::try_new(
+            schema,
+            vec![
+                Arc::new(Int64Array::from(vec![1, 2, 3])),
+                Arc::new(Int64Array::from(vec![30, 20, 10])),
+            ],
+        )?;
+        let (_dir, table) = prepare_table(vec![batch], SaveMode::Append, Vec::new()).await;
+        let provider = table.table_provider().await?;
+        let ctx = DeltaSessionContext::new().into_inner();
+        ctx.register_table("left_stats", Arc::clone(&provider))?;
+        ctx.register_table("right_stats", provider)?;
+
+        let plan = ctx
+            .sql(
+                "SELECT l.alias_value \
+                 FROM (SELECT id, value AS alias_value FROM left_stats) l \
+                 JOIN right_stats r ON l.id = r.id \
+                 ORDER BY l.alias_value",
+            )
+            .await?
+            .into_optimized_plan()?;
+        let mut scan_requests = Vec::new();
+        plan.apply(|node| {
+            if let LogicalPlan::TableScan(scan) = node {
+                scan_requests.push((
+                    scan.table_name.to_string(),
+                    scan.statistics_requests.clone(),
+                ));
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })?;
+
+        let left = scan_requests
+            .iter()
+            .find(|(name, _)| name.ends_with("left_stats"))
+            .expect("left Delta scan");
+        let right = scan_requests
+            .iter()
+            .find(|(name, _)| name.ends_with("right_stats"))
+            .expect("right Delta scan");
+        for (requests, column) in [(&left.1, "id"), (&left.1, "value"), (&right.1, "id")] {
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|request| requested_stat_column(request) == Some(column))
+                    .count(),
+                3,
+                "expected three statistics for {column}"
+            );
+        }
+        assert_eq!(
+            right
+                .1
+                .iter()
+                .filter(|request| requested_stat_column(request) == Some("value"))
+                .count(),
+            0,
+            "the qualified predicate requested statistics from the wrong scan"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delta_statistics_rule_leaves_non_delta_scans_unchanged() -> TestResult {
+        use datafusion::datasource::MemTable;
+
+        let schema = Arc::new(ArrowSchema::new(vec![
+            ArrowField::new("id", ArrowDataType::Int64, false),
+            ArrowField::new("value", ArrowDataType::Int64, false),
+        ]));
+        let batch = RecordBatch::try_new(
+            Arc::clone(&schema),
+            vec![
+                Arc::new(Int64Array::from(vec![1, 2])),
+                Arc::new(Int64Array::from(vec![10, 20])),
+            ],
+        )?;
+        let ctx = DeltaSessionContext::new().into_inner();
+        ctx.register_table(
+            "memory_table",
+            Arc::new(MemTable::try_new(schema, vec![vec![batch]])?),
+        )?;
+        let plan = ctx
+            .sql("SELECT value FROM memory_table WHERE id > 0 ORDER BY value")
+            .await?
+            .into_optimized_plan()?;
+        plan.apply(|node| {
+            if let LogicalPlan::TableScan(scan) = node {
+                assert!(
+                    scan.statistics_requests.is_empty(),
+                    "Delta statistics rule changed a scan from another provider"
+                );
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delta_scan_with_args_fulfills_requested_column_statistics() -> TestResult {
+        let schema = Arc::new(ArrowSchema::new(vec![ArrowField::new(
+            "id",
+            ArrowDataType::Int64,
+            true,
+        )]));
+        let batch = RecordBatch::try_new(
+            schema,
+            vec![Arc::new(Int64Array::from(vec![Some(1), None, Some(3)]))],
+        )?;
+        let (_dir, table) = prepare_table(vec![batch], SaveMode::Append, Vec::new()).await;
+        let provider = table.table_provider().await?;
+        let session = create_session();
+        let column = Arc::new(datafusion::common::Column::from_name("id"));
+        let requests = vec![
+            StatisticsRequest::RowCount,
+            StatisticsRequest::TotalByteSize,
+            StatisticsRequest::Min(Arc::clone(&column)),
+            StatisticsRequest::Max(Arc::clone(&column)),
+            StatisticsRequest::NullCount(column),
+        ];
+        let plan = provider
+            .scan_with_args(
+                &session.state(),
+                ScanArgs::default().with_statistics_requests(&requests),
+            )
+            .await?
+            .into_inner();
+        let statistics = StatisticsContext::new().compute(plan.as_ref(), &StatisticsArgs::new())?;
+
+        assert_eq!(
+            statistics.num_rows,
+            datafusion::common::stats::Precision::Exact(3)
+        );
+        assert!(matches!(
+            statistics.total_byte_size,
+            datafusion::common::stats::Precision::Inexact(_)
+        ));
+        let id = &statistics.column_statistics[0];
+        assert_eq!(
+            id.min_value,
+            datafusion::common::stats::Precision::Exact(ScalarValue::Int64(Some(1)))
+        );
+        assert_eq!(
+            id.max_value,
+            datafusion::common::stats::Precision::Exact(ScalarValue::Int64(Some(3)))
+        );
+        assert_eq!(
+            id.null_count,
+            datafusion::common::stats::Precision::Exact(1)
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delta_scan_statistics_requests_do_not_open_parquet_files() -> TestResult {
+        let schema = Arc::new(ArrowSchema::new(vec![ArrowField::new(
+            "id",
+            ArrowDataType::Int64,
+            false,
+        )]));
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(Int64Array::from(vec![1, 2, 3]))])?;
+        let (dir, table) = prepare_table(vec![batch], SaveMode::Append, Vec::new()).await;
+        let file_paths = table
+            .get_file_uris()?
+            .map(|uri| {
+                let path = PathBuf::from(uri);
+                if path.is_absolute() {
+                    path
+                } else {
+                    dir.path().join(path)
+                }
+            })
+            .collect::<Vec<_>>();
+        let provider = table.table_provider().await?;
+        for path in file_paths {
+            std::fs::remove_file(path)?;
+        }
+        let session = create_session();
+        let column = Arc::new(datafusion::common::Column::from_name("id"));
+        let cases = [
+            (
+                StatisticsRequest::Min(Arc::clone(&column)),
+                ColumnStatistics {
+                    min_value: Precision::Exact(ScalarValue::Int64(Some(1))),
+                    ..Default::default()
+                },
+            ),
+            (
+                StatisticsRequest::Max(Arc::clone(&column)),
+                ColumnStatistics {
+                    max_value: Precision::Exact(ScalarValue::Int64(Some(3))),
+                    ..Default::default()
+                },
+            ),
+            (
+                StatisticsRequest::NullCount(column),
+                ColumnStatistics {
+                    null_count: Precision::Exact(0),
+                    ..Default::default()
+                },
+            ),
+        ];
+
+        for (request, expected) in cases {
+            let requests = [request];
+            let plan = provider
+                .scan_with_args(
+                    &session.state(),
+                    ScanArgs::default().with_statistics_requests(&requests),
+                )
+                .await?
+                .into_inner();
+            let statistics =
+                StatisticsContext::new().compute(plan.as_ref(), &StatisticsArgs::new())?;
+
+            assert_eq!(statistics.column_statistics[0], expected);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delta_scan_does_not_claim_exact_column_stats_with_partial_add_coverage() -> TestResult
+    {
+        let add_with_stats = deltalake_core::kernel::Add {
+            path: "part-000.parquet".to_string(),
+            size: 10,
+            modification_time: 0,
+            data_change: true,
+            stats: Some(
+                r#"{"numRecords":2,"minValues":{"id":1},"maxValues":{"id":2},"nullCount":{"id":0}}"#
+                    .to_string(),
+            ),
+            ..Default::default()
+        };
+        let add_without_stats = deltalake_core::kernel::Add {
+            path: "part-001.parquet".to_string(),
+            size: 10,
+            modification_time: 0,
+            data_change: true,
+            stats: None,
+            ..Default::default()
+        };
+        let table = DeltaTable::new_in_memory()
+            .create()
+            .with_column("id", DataType::LONG, true, None)
+            .with_actions([
+                deltalake_core::kernel::Action::Add(add_with_stats),
+                deltalake_core::kernel::Action::Add(add_without_stats),
+            ])
+            .await?;
+        let provider = table.table_provider().await?;
+        let session = create_session();
+        let column = Arc::new(datafusion::common::Column::from_name("id"));
+        let requests = vec![
+            StatisticsRequest::Min(Arc::clone(&column)),
+            StatisticsRequest::Max(Arc::clone(&column)),
+            StatisticsRequest::NullCount(column),
+        ];
+
+        let plan = provider
+            .scan_with_args(
+                &session.state(),
+                ScanArgs::default().with_statistics_requests(&requests),
+            )
+            .await?
+            .into_inner();
+        let statistics = StatisticsContext::new().compute(plan.as_ref(), &StatisticsArgs::new())?;
+        let id = &statistics.column_statistics[0];
+
+        assert!(!matches!(id.min_value, Precision::Exact(_)));
+        assert!(!matches!(id.max_value, Precision::Exact(_)));
+        assert!(!matches!(id.null_count, Precision::Exact(_)));
+        assert!(!matches!(statistics.num_rows, Precision::Exact(_)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delta_scan_statistics_remain_honest_across_schema_evolution() -> TestResult {
+        let table_dir = tempfile::tempdir()?;
+        let table_uri = ensure_table_uri(table_dir.path().to_string_lossy())?;
+        let table = DeltaTable::try_from_url(table_uri)
+            .await?
+            .create()
+            .with_column("a", DataType::INTEGER, false, None)
+            .await?;
+        let initial = RecordBatch::try_from_iter_with_nullable(vec![(
+            "a",
+            Arc::new(Int32Array::from(vec![1, 2, 3])) as ArrayRef,
+            false,
+        )])?;
+        let table = table.write(vec![initial]).await?;
+        let evolved = RecordBatch::try_from_iter_with_nullable(vec![
+            (
+                "a",
+                Arc::new(Int32Array::from(vec![4, 5, 6])) as ArrayRef,
+                false,
+            ),
+            (
+                "b",
+                Arc::new(Int32Array::from(vec![7, 8, 9])) as ArrayRef,
+                true,
+            ),
+        ])?;
+        let table = table
+            .write(vec![evolved])
+            .with_schema_mode(SchemaMode::Merge)
+            .await?;
+        let provider = table.table_provider().await?;
+        let session = create_session();
+        let column = Arc::new(datafusion::common::Column::from_name("b"));
+        let requests = vec![
+            StatisticsRequest::Min(Arc::clone(&column)),
+            StatisticsRequest::Max(Arc::clone(&column)),
+            StatisticsRequest::NullCount(column),
+        ];
+
+        let plan = provider
+            .scan_with_args(
+                &session.state(),
+                ScanArgs::default().with_statistics_requests(&requests),
+            )
+            .await?
+            .into_inner();
+        let statistics = StatisticsContext::new().compute(plan.as_ref(), &StatisticsArgs::new())?;
+        let b_index = provider.schema().index_of("b")?;
+        let b = &statistics.column_statistics[b_index];
+        assert_eq!(statistics.num_rows, Precision::Exact(6));
+        assert_eq!(b.min_value, Precision::Absent);
+        assert_eq!(b.max_value, Precision::Absent);
+        assert_eq!(b.null_count, Precision::Absent);
+
+        let ctx = DeltaSessionContext::new().into_inner();
+        ctx.register_table("evolved_stats", provider)?;
+        let batches = ctx
+            .sql("SELECT min(b), max(b), count(b) FROM evolved_stats")
+            .await?
+            .collect()
+            .await?;
+        assert_batches_sorted_eq!(
+            &[
+                "+----------------------+----------------------+------------------------+",
+                "| min(evolved_stats.b) | max(evolved_stats.b) | count(evolved_stats.b) |",
+                "+----------------------+----------------------+------------------------+",
+                "| 7                    | 9                    | 3                      |",
+                "+----------------------+----------------------+------------------------+",
+            ],
+            &batches
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delta_scan_partition_statistics_exclude_fully_deleted_partitions() -> TestResult {
+        use delta_kernel::actions::deletion_vector_writer::{
+            KernelDeletionVector, StreamingDeletionVectorWriter,
+        };
+        use deltalake_core::TableProperty;
+        use deltalake_core::kernel::{Action, Add, DeletionVectorDescriptor, StorageType};
+        use parquet::arrow::ArrowWriter;
+
+        fn write_parquet(path: &std::path::Path, values: Vec<i32>) -> TestResult {
+            let batch = RecordBatch::try_from_iter_with_nullable(vec![(
+                "id",
+                Arc::new(Int32Array::from(values)) as ArrayRef,
+                false,
+            )])?;
+            let file = std::fs::File::create(path)?;
+            let mut writer = ArrowWriter::try_new(file, batch.schema(), None)?;
+            writer.write(&batch)?;
+            writer.close()?;
+            Ok(())
+        }
+
+        let table_dir = tempfile::tempdir()?;
+        let deleted_dir = table_dir.path().join("part=deleted");
+        let live_dir = table_dir.path().join("part=live");
+        std::fs::create_dir_all(&deleted_dir)?;
+        std::fs::create_dir_all(&live_dir)?;
+
+        let deleted_path = deleted_dir.join("deleted.parquet");
+        let live_path = live_dir.join("live.parquet");
+        write_parquet(&deleted_path, vec![1, 2])?;
+        write_parquet(&live_path, vec![3, 4])?;
+
+        let mut deletion_vector = KernelDeletionVector::new();
+        deletion_vector.add_deleted_row_indexes([0, 1]);
+        let mut deletion_vector_bytes = Vec::new();
+        let mut deletion_vector_writer =
+            StreamingDeletionVectorWriter::new(&mut deletion_vector_bytes);
+        let deletion_vector_result =
+            deletion_vector_writer.write_deletion_vector(deletion_vector)?;
+        deletion_vector_writer.finalize()?;
+        let deletion_vector_path = table_dir.path().join("deletion-vector.bin");
+        std::fs::write(&deletion_vector_path, deletion_vector_bytes)?;
+
+        let add = |path: &str, partition: &str, size: u64, min: i32, max: i32| Add {
+            path: path.to_string(),
+            size: size as i64,
+            modification_time: 0,
+            data_change: true,
+            partition_values: std::collections::HashMap::from([(
+                "part".to_string(),
+                Some(partition.to_string()),
+            )]),
+            stats: Some(
+                serde_json::json!({
+                    "numRecords": 2,
+                    "minValues": { "id": min },
+                    "maxValues": { "id": max },
+                    "nullCount": { "id": 0 }
+                })
+                .to_string(),
+            ),
+            ..Default::default()
+        };
+        let mut deleted_add = add(
+            "part=deleted/deleted.parquet",
+            "deleted",
+            std::fs::metadata(&deleted_path)?.len(),
+            1,
+            2,
+        );
+        deleted_add.deletion_vector = Some(DeletionVectorDescriptor {
+            storage_type: StorageType::AbsolutePath,
+            path_or_inline_dv: Url::from_file_path(&deletion_vector_path)
+                .expect("temporary deletion vector path must be absolute")
+                .to_string(),
+            offset: Some(deletion_vector_result.offset),
+            size_in_bytes: deletion_vector_result.size_in_bytes,
+            cardinality: deletion_vector_result.cardinality,
+        });
+        let live_add = add(
+            "part=live/live.parquet",
+            "live",
+            std::fs::metadata(&live_path)?.len(),
+            3,
+            4,
+        );
+
+        let table_uri = ensure_table_uri(table_dir.path().to_string_lossy())?;
+        let table = DeltaTable::try_from_url(table_uri)
+            .await?
+            .create()
+            .with_column("id", DataType::INTEGER, false, None)
+            .with_column("part", DataType::STRING, false, None)
+            .with_partition_columns(["part"])
+            .with_configuration_property(TableProperty::EnableDeletionVectors, Some("true"))
+            .with_actions([Action::Add(deleted_add), Action::Add(live_add)])
+            .await?;
+        let provider = table.table_provider().await?;
+        let session = create_session();
+        let state = session.state();
+        let scan = provider.scan(&state, None, &[], None).await?;
+        let statistics = StatisticsContext::new().compute(scan.as_ref(), &StatisticsArgs::new())?;
+        let part_index = provider.schema().index_of("part")?;
+        let part = &statistics.column_statistics[part_index];
+
+        assert_eq!(statistics.num_rows, Precision::Exact(2));
+        assert_eq!(
+            part.min_value,
+            Precision::Exact(ScalarValue::Utf8(Some("live".to_string())))
+        );
+        assert_eq!(part.max_value, part.min_value);
+
+        let batches = collect_partitioned(scan, state.task_ctx()).await?;
+        assert_batches_sorted_eq!(
+            &[
+                "+----+------+",
+                "| id | part |",
+                "+----+------+",
+                "| 3  | live |",
+                "| 4  | live |",
+                "+----+------+",
+            ],
+            &batches.into_iter().flatten().collect::<Vec<_>>()
+        );
+        Ok(())
     }
 
     #[tokio::test]

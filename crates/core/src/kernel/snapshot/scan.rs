@@ -163,9 +163,13 @@ fn with_kernel_stats_output(
         StatsSourcePolicy::ParsedWithJsonFallback => match materialization.stats_projection() {
             StatsProjection::None => delta_kernel::scan::StatsOptions::json_only(),
             StatsProjection::Full => delta_kernel::scan::StatsOptions::all_struct(),
-            StatsProjection::PredicateColumns(_columns) => {
-                // TODO: Pass the selected columns to `StatsOptions::struct_columns`.
-                delta_kernel::scan::StatsOptions::all_struct()
+            projection @ (StatsProjection::PredicateColumns(_)
+            | StatsProjection::QueryColumns { .. }) => {
+                delta_kernel::scan::StatsOptions::struct_columns(
+                    projection
+                        .selected_physical_columns()
+                        .expect("query statistics projection needs physical columns"),
+                )
             }
             StatsProjection::NumRecordsOnly => delta_kernel::scan::StatsOptions::json_only(),
         },
@@ -176,6 +180,8 @@ fn with_kernel_stats_output(
 
 #[cfg(test)]
 mod tests {
+    use arrow_array::{RecordBatch, StructArray};
+    use delta_kernel::engine::arrow_data::ArrowEngineData;
     use delta_kernel::expressions::{ColumnName, Scalar};
     use delta_kernel::schema::{DataType, StructField, StructType};
     use delta_kernel::{Expression, PredicateRef};
@@ -236,6 +242,68 @@ mod tests {
             scan.stats_materialization().stats_projection(),
             &StatsProjection::PredicateColumns([ColumnName::new(["value"])].into())
         );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn query_projection_narrows_kernel_struct_stats_to_selected_columns() -> DeltaResult<()> {
+        let add = crate::kernel::Add {
+            path: "part-000.parquet".to_string(),
+            size: 10,
+            modification_time: 0,
+            data_change: true,
+            stats: Some(
+                r#"{"numRecords":2,"minValues":{"value":1,"unreferenced_col":"a"},"maxValues":{"value":2,"unreferenced_col":"b"},"nullCount":{"value":0,"unreferenced_col":0}}"#
+                    .to_string(),
+            ),
+            ..Default::default()
+        };
+        let table = DeltaTable::new_in_memory()
+            .create()
+            .with_columns([
+                StructField::nullable("value", DataType::INTEGER),
+                StructField::nullable("unreferenced_col", DataType::STRING),
+            ])
+            .with_actions([Action::Add(add)])
+            .await?;
+        let log_store = table.log_store();
+        let snapshot = Snapshot::try_new(log_store.as_ref(), Default::default(), None).await?;
+        let projection = StatsProjection::QueryColumns {
+            min: [ColumnName::new(["value"])].into(),
+            max: Default::default(),
+            null_count: Default::default(),
+        };
+        let scan = snapshot
+            .scan_builder()
+            .with_stats_materialization(FileStatsMaterialization::query(projection))
+            .build()?;
+        let metadata = scan
+            .scan_metadata(log_store.engine(None))
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        assert!(!metadata.is_empty());
+        for scan_metadata in metadata {
+            let (data, _) = scan_metadata.scan_files.into_parts();
+            let batch: RecordBatch = ArrowEngineData::try_from_engine_data(data)?.into();
+            let stats = batch
+                .column_by_name("stats_parsed")
+                .and_then(|array| array.as_any().downcast_ref::<StructArray>())
+                .expect("selected Kernel statistics output");
+            for field_name in ["minValues", "maxValues", "nullCount"] {
+                let values = stats
+                    .column_by_name(field_name)
+                    .and_then(|array| array.as_any().downcast_ref::<StructArray>())
+                    .unwrap_or_else(|| panic!("missing {field_name}"));
+                let names = values
+                    .fields()
+                    .iter()
+                    .map(|field| field.name().as_str())
+                    .collect::<Vec<_>>();
+                assert_eq!(names, ["value"]);
+            }
+        }
 
         Ok(())
     }

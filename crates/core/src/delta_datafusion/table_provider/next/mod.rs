@@ -31,10 +31,12 @@ use std::{borrow::Cow, fmt, sync::Arc};
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use datafusion::common::{DataFusionError, Result};
 use datafusion::datasource::{TableType, sink::DataSinkExec};
-use datafusion::logical_expr::{TableProviderFilterPushDown, dml::InsertOp};
+use datafusion::logical_expr::{
+    TableProviderFilterPushDown, dml::InsertOp, statistics::StatisticsRequest,
+};
 use datafusion::prelude::Expr;
 use datafusion::{
-    catalog::{Session, TableProvider},
+    catalog::{ScanArgs, ScanResult, Session, TableProvider},
     logical_expr::LogicalPlan,
     physical_plan::ExecutionPlan,
 };
@@ -46,7 +48,7 @@ use uuid::Uuid;
 
 pub use self::scan::DeltaScanExec;
 pub(crate) use self::scan::KernelScanPlan;
-use self::scan::ProjectedScanContract;
+use self::scan::{ProjectedScanContract, RequestedStatisticsColumns};
 use super::data_sink::DeltaDataSink;
 use crate::DeltaTableError;
 use crate::delta_datafusion::DeltaScanConfig;
@@ -701,6 +703,51 @@ impl DeltaScan {
             .map(Some)
     }
 
+    async fn scan_with_statistics(
+        &self,
+        session: &dyn Session,
+        projection: Option<&[usize]>,
+        filters: &[Expr],
+        limit: Option<usize>,
+        statistics_requests: &[StatisticsRequest],
+    ) -> Result<Arc<dyn ExecutionPlan>> {
+        self.ensure_read_ready(session)?;
+        let engine = DataFusionEngine::new_from_session(session);
+        let contract = ProjectedScanContract::try_new(
+            self.scan_schema.clone(),
+            self.full_schema.clone(),
+            &self.config,
+            self.row_index_column.as_deref(),
+            projection,
+            filters,
+        )?;
+        let statistics = RequestedStatisticsColumns::from_requests(statistics_requests);
+        let scan_plan = KernelScanPlan::try_new_with_contract_and_statistics(
+            self.snapshot.snapshot(),
+            contract,
+            filters,
+            &self.config,
+            self.file_skipping_predicate.clone(),
+            &statistics,
+        )?;
+
+        let resolved_file_selection = self
+            .resolve_file_selection(self.file_selection.as_ref(), engine.clone())
+            .await?;
+        let stream = self.scan_metadata_stream(&scan_plan, engine.clone());
+
+        scan::execution_plan(
+            &self.config,
+            session,
+            scan_plan,
+            stream,
+            engine,
+            limit,
+            resolved_file_selection.as_ref(),
+        )
+        .await
+    }
+
     /// Start building a scan/table provider with a fluent [`TableProviderBuilder`].
     pub fn builder() -> TableProviderBuilder {
         TableProviderBuilder::new()
@@ -732,39 +779,26 @@ impl TableProvider for DeltaScan {
         filters: &[Expr],
         limit: Option<usize>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        self.ensure_read_ready(session)?;
-        let engine = DataFusionEngine::new_from_session(session);
-        let contract = ProjectedScanContract::try_new(
-            self.scan_schema.clone(),
-            self.full_schema.clone(),
-            &self.config,
-            self.row_index_column.as_deref(),
-            projection,
-            filters,
-        )?;
-        let scan_plan = KernelScanPlan::try_new_with_contract(
-            self.snapshot.snapshot(),
-            contract,
-            filters,
-            &self.config,
-            self.file_skipping_predicate.clone(),
-        )?;
+        self.scan_with_statistics(session, projection.map(Vec::as_slice), filters, limit, &[])
+            .await
+    }
 
-        let resolved_file_selection = self
-            .resolve_file_selection(self.file_selection.as_ref(), engine.clone())
+    async fn scan_with_args<'a>(
+        &self,
+        session: &dyn Session,
+        args: ScanArgs<'a>,
+    ) -> Result<ScanResult> {
+        let filters = args.filters().unwrap_or_default();
+        let plan = self
+            .scan_with_statistics(
+                session,
+                args.projection(),
+                filters,
+                args.limit(),
+                args.statistics_requests(),
+            )
             .await?;
-        let stream = self.scan_metadata_stream(&scan_plan, engine.clone());
-
-        scan::execution_plan(
-            &self.config,
-            session,
-            scan_plan,
-            stream,
-            engine,
-            limit,
-            resolved_file_selection.as_ref(),
-        )
-        .await
+        Ok(plan.into())
     }
 
     async fn insert_into(
@@ -870,15 +904,20 @@ mod tests {
     };
     use datafusion::{
         catalog::Session,
+        common::{Column, stats::Precision},
         datasource::MemTable,
         datasource::{
             physical_plan::{FileScanConfig, ParquetSource},
             source::DataSource,
         },
         error::DataFusionError,
-        logical_expr::dml::InsertOp,
+        logical_expr::{dml::InsertOp, statistics::StatisticsRequest},
         physical_optimizer::pruning::PruningPredicateBuilder,
-        physical_plan::{ExecutionPlanVisitor, collect_partitioned, visit_execution_plan},
+        physical_plan::{
+            ExecutionPlanVisitor, collect_partitioned,
+            statistics::{StatisticsArgs, StatisticsContext},
+            visit_execution_plan,
+        },
         prelude::{col, lit},
     };
     use datafusion_datasource::file::FileSource as _;
@@ -2774,6 +2813,33 @@ mod tests {
             &ArrowDataType::Timestamp(TimeUnit::Millisecond, None)
         );
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn schema_override_preserves_only_type_independent_requested_statistics() -> TestResult {
+        let (_table, provider) = provider_for_partitioned_table().await?;
+        let session = create_session();
+        let column = Arc::new(Column::from_name("number"));
+        let requests = vec![
+            StatisticsRequest::Min(Arc::clone(&column)),
+            StatisticsRequest::Max(Arc::clone(&column)),
+            StatisticsRequest::NullCount(column),
+        ];
+
+        let plan = provider
+            .scan_with_args(
+                &session.state(),
+                ScanArgs::default().with_statistics_requests(&requests),
+            )
+            .await?
+            .into_inner();
+        let statistics = StatisticsContext::new().compute(plan.as_ref(), &StatisticsArgs::new())?;
+        let number = &statistics.column_statistics[provider.schema().index_of("number")?];
+
+        assert_eq!(number.min_value, Precision::Absent);
+        assert_eq!(number.max_value, Precision::Absent);
+        assert_eq!(number.null_count, Precision::Exact(0));
         Ok(())
     }
 

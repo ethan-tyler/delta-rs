@@ -8,8 +8,6 @@ use arrow_schema::{
 use delta_kernel::PredicateRef;
 use delta_kernel::engine::arrow_conversion::TryIntoArrow as _;
 use delta_kernel::expressions::ColumnName;
-#[cfg(feature = "datafusion")]
-use delta_kernel::scan::Scan as KernelScan;
 use delta_kernel::schema::{
     DataType, PrimitiveType, SchemaRef as KernelSchemaRef, StructField, StructType,
 };
@@ -37,21 +35,27 @@ const ORDERED_STATS_VALUE_FIELDS: [&str; 3] =
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum StatsProjection {
-    /// Do not materialize parsed file statistics.
+    /// Skip parsed file statistics.
     None,
-    /// Materialize the full stats schema supported by the table configuration.
+    /// Materialize the table configuration's full statistics schema.
     Full,
-    /// Materialize only the `numRecords` field.
+    /// Materialize `numRecords` without column statistics.
     NumRecordsOnly,
     /// Materialize `numRecords` and stats for selected physical data columns.
     PredicateColumns(BTreeSet<ColumnName>),
+    /// Materialize the requested statistic kinds for selected physical columns.
+    QueryColumns {
+        min: BTreeSet<ColumnName>,
+        max: BTreeSet<ColumnName>,
+        null_count: BTreeSet<ColumnName>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum StatsSourcePolicy {
     /// Prefer `stats_parsed`, falling back to raw JSON `stats` when needed.
     ParsedWithJsonFallback,
-    /// Do not read or emit parsed stats.
+    /// Skip parsed statistics.
     None,
 }
 
@@ -209,57 +213,85 @@ impl StatsProjection {
         }
     }
 
-    /// Builds the stats projection for a scan using physical predicate references.
-    ///
-    /// Use `NumRecordsOnly` when a predicate only touches partition columns,
-    /// skips all files, or references no data columns.
-    #[cfg(feature = "datafusion")]
-    pub(crate) fn for_scan(scan: &KernelScan) -> DeltaResult<Self> {
-        let Some(predicate) = scan.physical_predicate() else {
-            debug!(
-                projection = "num_records_only",
-                reason = "no physical predicate",
-                "stats projection selected"
-            );
-            return Ok(Self::NumRecordsOnly);
+    /// Combine query planner statistics requests with the scan predicate projection.
+    pub(crate) fn for_scan_inputs_with_requests(
+        snapshot: &KernelSnapshot,
+        schema: Option<&KernelSchemaRef>,
+        predicate: Option<&PredicateRef>,
+        requested_min: &BTreeSet<ColumnName>,
+        requested_max: &BTreeSet<ColumnName>,
+        requested_null_count: &BTreeSet<ColumnName>,
+    ) -> DeltaResult<Self> {
+        let inferred = Self::for_scan_inputs(snapshot, schema, predicate)?;
+        if (requested_min.is_empty() && requested_max.is_empty() && requested_null_count.is_empty())
+            || matches!(inferred, Self::Full)
+        {
+            return Ok(inferred);
+        }
+
+        let snapshot_schema;
+        let logical_schema = match schema {
+            Some(schema) => schema.as_ref(),
+            None => {
+                snapshot_schema = snapshot.schema();
+                snapshot_schema.as_ref()
+            }
         };
+        let stats_schema = snapshot.table_configuration().stats_schema()?;
+        let column_mapping_mode = snapshot.table_configuration().column_mapping_mode();
+        let (mut min, mut max, mut null_count) = match inferred {
+            Self::PredicateColumns(columns) => (columns.clone(), columns.clone(), columns),
+            Self::QueryColumns {
+                min,
+                max,
+                null_count,
+            } => (min, max, null_count),
+            Self::None | Self::NumRecordsOnly => {
+                (BTreeSet::new(), BTreeSet::new(), BTreeSet::new())
+            }
+            Self::Full => unreachable!(),
+        };
+        min.extend(requested_min.iter().filter_map(|column| {
+            let physical = physicalize_column_path(logical_schema, column, column_mapping_mode)?;
+            stats_schema_contains_statistic(stats_schema.as_ref(), FIELD_MIN_VALUES, &physical)
+                .then_some(physical)
+        }));
+        max.extend(requested_max.iter().filter_map(|column| {
+            let physical = physicalize_column_path(logical_schema, column, column_mapping_mode)?;
+            stats_schema_contains_statistic(stats_schema.as_ref(), FIELD_MAX_VALUES, &physical)
+                .then_some(physical)
+        }));
+        null_count.extend(requested_null_count.iter().filter_map(|column| {
+            let physical = physicalize_column_path(logical_schema, column, column_mapping_mode)?;
+            stats_schema_contains_null_count(stats_schema.as_ref(), &physical).then_some(physical)
+        }));
 
-        let stats_schema = scan.snapshot().table_configuration().stats_schema()?;
-        let requested_columns = predicate
-            .references()
-            .into_iter()
-            .cloned()
-            .collect::<BTreeSet<_>>();
-
-        let columns = requested_columns
-            .iter()
-            .filter_map(|column| {
-                stats_schema_contains_data_column(stats_schema.as_ref(), column)
-                    .then(|| column.clone())
-            })
-            .collect::<BTreeSet<_>>();
-
-        if columns.is_empty() {
+        if min.is_empty() && max.is_empty() && null_count.is_empty() {
             debug!(
                 projection = "num_records_only",
-                reason = "no physical data columns referenced",
-                requested_columns = %display_columns(&requested_columns),
+                requested_min = %display_columns(requested_min),
+                requested_max = %display_columns(requested_max),
+                requested_null_count = %display_columns(requested_null_count),
+                reason = "table metadata lacks the requested column statistics",
                 "stats projection selected"
             );
             Ok(Self::NumRecordsOnly)
         } else {
-            let filtered_columns = requested_columns
-                .difference(&columns)
-                .cloned()
-                .collect::<BTreeSet<_>>();
             debug!(
-                projection = "predicate_columns",
-                requested_columns = %display_columns(&requested_columns),
-                selected_columns = %display_columns(&columns),
-                filtered_columns = %display_columns(&filtered_columns),
+                projection = "query_columns",
+                requested_min = %display_columns(requested_min),
+                requested_max = %display_columns(requested_max),
+                requested_null_count = %display_columns(requested_null_count),
+                selected_min = %display_columns(&min),
+                selected_max = %display_columns(&max),
+                selected_null_count = %display_columns(&null_count),
                 "stats projection selected"
             );
-            Ok(Self::PredicateColumns(columns))
+            Ok(Self::QueryColumns {
+                min,
+                max,
+                null_count,
+            })
         }
     }
 
@@ -273,6 +305,21 @@ impl StatsProjection {
                 Ok(Arc::new(filter_stats_schema(
                     full_stats_schema.as_ref(),
                     columns,
+                    columns,
+                    columns,
+                )?))
+            }
+            Self::QueryColumns {
+                min,
+                max,
+                null_count,
+            } => {
+                let full_stats_schema = snapshot.table_configuration().stats_schema()?;
+                Ok(Arc::new(filter_stats_schema(
+                    full_stats_schema.as_ref(),
+                    min,
+                    max,
+                    null_count,
                 )?))
             }
         }
@@ -303,6 +350,27 @@ impl StatsProjection {
         Ok(Arc::new(ArrowSchema::new(fields)))
     }
 
+    /// Returns the physical data column paths for structured Kernel output.
+    pub(crate) fn selected_physical_columns(&self) -> Option<Vec<ColumnName>> {
+        match self {
+            Self::PredicateColumns(columns) => Some(columns.iter().cloned().collect()),
+            Self::QueryColumns {
+                min,
+                max,
+                null_count,
+            } => Some(
+                min.iter()
+                    .chain(max)
+                    .chain(null_count)
+                    .cloned()
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
+                    .collect(),
+            ),
+            Self::None | Self::Full | Self::NumRecordsOnly => None,
+        }
+    }
+
     /// Returns whether this projection emits stats for a root physical column.
     ///
     /// A nested reference such as `nested.leaf` still emits the enclosing field
@@ -313,6 +381,16 @@ impl StatsProjection {
             Self::None | Self::NumRecordsOnly => false,
             Self::Full => true,
             Self::PredicateColumns(columns) => columns.iter().any(|column| {
+                column
+                    .path()
+                    .first()
+                    .is_some_and(|name| name.as_str() == physical_name)
+            }),
+            Self::QueryColumns {
+                min,
+                max,
+                null_count,
+            } => min.iter().chain(max).chain(null_count).any(|column| {
                 column
                     .path()
                     .first()
@@ -385,15 +463,29 @@ fn physicalize_column_path(
 }
 
 fn stats_schema_contains_data_column(stats_schema: &StructType, column: &ColumnName) -> bool {
-    let has_null_count = stats_struct_schema(stats_schema, FIELD_NULL_COUNT)
-        .is_some_and(|schema| schema_contains_path(schema, column));
-    let has_min_max = min_max_stats_schemas(stats_schema, column).is_some_and(|min_max_fields| {
+    stats_schema_contains_null_count(stats_schema, column)
+        || stats_schema_contains_min_max(stats_schema, column)
+}
+
+fn stats_schema_contains_null_count(stats_schema: &StructType, column: &ColumnName) -> bool {
+    stats_schema_contains_statistic(stats_schema, FIELD_NULL_COUNT, column)
+}
+
+fn stats_schema_contains_statistic(
+    stats_schema: &StructType,
+    statistic: &str,
+    column: &ColumnName,
+) -> bool {
+    stats_struct_schema(stats_schema, statistic)
+        .is_some_and(|schema| schema_contains_path(schema, column))
+}
+
+fn stats_schema_contains_min_max(stats_schema: &StructType, column: &ColumnName) -> bool {
+    min_max_stats_schemas(stats_schema, column).is_some_and(|min_max_fields| {
         min_max_fields
             .iter()
             .all(|schema| schema_contains_path(schema, column))
-    });
-
-    has_null_count || has_min_max
+    })
 }
 
 /// Returns the min/max stats schemas when both sides are present as structs.
@@ -442,7 +534,9 @@ fn display_columns(columns: &BTreeSet<ColumnName>) -> String {
 /// to the referenced paths and dropped when nothing remains.
 fn filter_stats_schema(
     stats_schema: &StructType,
-    paths: &BTreeSet<ColumnName>,
+    min_paths: &BTreeSet<ColumnName>,
+    max_paths: &BTreeSet<ColumnName>,
+    null_count_paths: &BTreeSet<ColumnName>,
 ) -> DeltaResult<StructType> {
     let mut fields = Vec::with_capacity(4);
     fields.push(
@@ -453,6 +547,15 @@ fn filter_stats_schema(
     );
 
     for stats_field_name in ORDERED_STATS_VALUE_FIELDS {
+        let paths = match stats_field_name {
+            FIELD_NULL_COUNT => null_count_paths,
+            FIELD_MIN_VALUES => min_paths,
+            FIELD_MAX_VALUES => max_paths,
+            _ => continue,
+        };
+        if paths.is_empty() {
+            continue;
+        }
         let Some(field) = stats_schema.field(stats_field_name) else {
             continue;
         };
@@ -1109,6 +1212,48 @@ mod tests {
             assert!(inner.field(physical).is_some());
             assert!(inner.field("Super Name").is_none());
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn query_null_count_projection_uses_only_the_mapped_physical_field() -> TestResult {
+        let snapshot = column_mapping_snapshot().await?;
+        let logical_column = ColumnName::new(["Super Name"]);
+        let projection = StatsProjection::for_scan_inputs_with_requests(
+            snapshot.inner.as_ref(),
+            None,
+            None,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+            &BTreeSet::from([logical_column]),
+        )?;
+        let stats_schema = projection.stats_schema(snapshot.inner.as_ref())?;
+
+        let logical_schema = snapshot.inner.table_configuration().logical_schema();
+        let logical = logical_schema
+            .field("Super Name")
+            .expect("missing logical column");
+        let physical =
+            logical.physical_name(snapshot.inner.table_configuration().column_mapping_mode());
+        assert_eq!(
+            projection,
+            StatsProjection::QueryColumns {
+                min: BTreeSet::new(),
+                max: BTreeSet::new(),
+                null_count: BTreeSet::from([ColumnName::new([physical])]),
+            }
+        );
+        let null_count = stats_schema
+            .field(FIELD_NULL_COUNT)
+            .expect("projection must contain nullCount");
+        let DataType::Struct(inner) = null_count.data_type() else {
+            panic!("nullCount projection must be a struct");
+        };
+        assert!(inner.field(physical).is_some());
+        assert!(inner.field("Super Name").is_none());
+        assert!(stats_schema.field(FIELD_MIN_VALUES).is_none());
+        assert!(stats_schema.field(FIELD_MAX_VALUES).is_none());
 
         Ok(())
     }

@@ -363,6 +363,7 @@ impl DeltaSessionContext {
             .with_config(config)
             .with_runtime_env(runtime_env)
             .with_query_planner(planner)
+            .with_optimizer_rule(Arc::new(super::DeltaStatisticsRule))
             .build();
 
         let inner = SessionContext::new_with_state(state);

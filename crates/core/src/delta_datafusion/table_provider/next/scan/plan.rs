@@ -13,6 +13,7 @@
 //! Since the TableProvider (DeltaScan) exposes the logical table schema,
 //! we need to handle translation between the predicates expressed
 //! against the logical schema,
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use arrow::datatypes::{Schema, SchemaRef};
@@ -20,12 +21,13 @@ use arrow_schema::{DataType, Field, FieldRef, SchemaBuilder};
 use datafusion::common::error::Result;
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{HashMap, HashSet, plan_err};
-use datafusion::logical_expr::TableProviderFilterPushDown;
 use datafusion::logical_expr::utils::conjunction;
+use datafusion::logical_expr::{TableProviderFilterPushDown, statistics::StatisticsRequest};
 use datafusion::prelude::Expr;
 use datafusion::scalar::ScalarValue;
 use datafusion_datasource::file_scan_config::wrap_partition_type_in_dict;
 use delta_kernel::engine::arrow_conversion::TryIntoArrow as _;
+use delta_kernel::expressions::ColumnName;
 use delta_kernel::schema::DataType as KernelDataType;
 use delta_kernel::table_configuration::TableConfiguration;
 use delta_kernel::table_features::TableFeature;
@@ -38,7 +40,7 @@ use crate::delta_datafusion::engine::{
     to_datafusion_expr, to_delta_expression, to_delta_predicate,
 };
 use crate::delta_datafusion::table_provider::next::FILE_ID_COLUMN_DEFAULT;
-use crate::kernel::{Scan, Snapshot};
+use crate::kernel::{FileStatsMaterialization, Scan, Snapshot, StatsProjection};
 
 /// Query scoped contract between the provider, logical planner, and scan execs.
 ///
@@ -67,6 +69,30 @@ pub(crate) struct ProjectedScanContract {
     pub(crate) retain_row_index: bool,
 }
 
+/// Column statistics that DataFusion requests for one scan.
+#[derive(Debug, Default)]
+pub(crate) struct RequestedStatisticsColumns {
+    min: BTreeSet<ColumnName>,
+    max: BTreeSet<ColumnName>,
+    null_count: BTreeSet<ColumnName>,
+}
+
+impl RequestedStatisticsColumns {
+    pub(crate) fn from_requests(requests: &[StatisticsRequest]) -> Self {
+        let mut requested = Self::default();
+        for request in requests {
+            let (columns, column) = match request {
+                StatisticsRequest::Min(column) => (&mut requested.min, column),
+                StatisticsRequest::Max(column) => (&mut requested.max, column),
+                StatisticsRequest::NullCount(column) => (&mut requested.null_count, column),
+                _ => continue,
+            };
+            columns.insert(ColumnName::new([column.name.as_str()]));
+        }
+        requested
+    }
+}
+
 impl ProjectedScanContract {
     /// Returns the row index field when retained in scan output.
     pub(crate) fn retained_row_index_field(&self) -> Option<FieldRef> {
@@ -81,7 +107,7 @@ impl ProjectedScanContract {
         provider_schema: SchemaRef,
         config: &DeltaScanConfig,
         row_index_column: Option<&str>,
-        projection: Option<&Vec<usize>>,
+        projection: Option<&[usize]>,
         filters: &[Expr],
     ) -> Result<Self> {
         let file_id_field = config.file_id_field();
@@ -237,7 +263,7 @@ pub(crate) struct KernelScanPlan {
 impl KernelScanPlan {
     pub(crate) fn try_new(
         snapshot: &Snapshot,
-        projection: Option<&Vec<usize>>,
+        projection: Option<&[usize]>,
         filters: &[Expr],
         config: &DeltaScanConfig,
         skipping_predicate: Option<Vec<Expr>>,
@@ -268,6 +294,25 @@ impl KernelScanPlan {
         config: &DeltaScanConfig,
         skipping_predicate: Option<Vec<Expr>>,
     ) -> Result<Self> {
+        let statistics = RequestedStatisticsColumns::default();
+        Self::try_new_with_contract_and_statistics(
+            snapshot,
+            contract,
+            filters,
+            config,
+            skipping_predicate,
+            &statistics,
+        )
+    }
+
+    pub(crate) fn try_new_with_contract_and_statistics(
+        snapshot: &Snapshot,
+        contract: ProjectedScanContract,
+        filters: &[Expr],
+        config: &DeltaScanConfig,
+        skipping_predicate: Option<Vec<Expr>>,
+        statistics: &RequestedStatisticsColumns,
+    ) -> Result<Self> {
         let table_config = snapshot.table_configuration();
         let kernel_logical_schema = table_config.logical_schema();
 
@@ -290,9 +335,18 @@ impl KernelScanPlan {
             kernel_predicate
         };
 
+        let stats_projection = StatsProjection::for_scan_inputs_with_requests(
+            snapshot.inner.as_ref(),
+            None,
+            scan_predicate.as_ref(),
+            &statistics.min,
+            &statistics.max,
+            &statistics.null_count,
+        )?;
         let scan_builder = snapshot
             .scan_builder()
-            .with_predicate(scan_predicate.clone());
+            .with_predicate(scan_predicate.clone())
+            .with_stats_materialization(FileStatsMaterialization::query(stats_projection));
 
         let scan = if contract.kernel_projection.is_some() {
             let kernel_projection_names = contract
@@ -356,7 +410,7 @@ impl DeltaScanConfig {
 
     pub(crate) fn provider_file_id_column<'a>(
         &'a self,
-        projection: Option<&Vec<usize>>,
+        projection: Option<&[usize]>,
         result_schema: &Schema,
     ) -> Option<&'a str> {
         let name = self.file_column_name.as_deref()?;
@@ -699,10 +753,10 @@ mod tests {
         delta_datafusion::create_session,
         test_utils::{TestResult, open_fs_path},
     };
-    use datafusion::logical_expr::and;
     use datafusion::{
         assert_batches_sorted_eq,
         common::ToDFSchema,
+        logical_expr::and,
         physical_plan::collect,
         prelude::{col, lit},
         scalar::ScalarValue,
@@ -1024,7 +1078,7 @@ mod tests {
             Arc::new(arrow_schema::Field::new("letter", DataType::Utf8, true)),
         ]));
         let config = DeltaScanConfig::default().with_file_column_name("file_id");
-        let projection = vec![0];
+        let projection = [0];
         let provider_schema = Arc::new(Schema::new(vec![
             Arc::new(arrow_schema::Field::new("data", DataType::Utf8, true)),
             Arc::new(arrow_schema::Field::new("letter", DataType::Utf8, true)),
@@ -1349,7 +1403,7 @@ mod tests {
         );
         let scan_plan = KernelScanPlan::try_new(
             snapshot,
-            Some(&vec![4]),
+            Some(&[4]),
             &[filter],
             &DeltaScanConfig::default(),
             None,

@@ -74,6 +74,8 @@ pin_project! {
 
         kernel_scan: Arc<KernelScan>,
 
+        stats_projection: StatsProjection,
+
         scan_config: DeltaScanConfig,
 
         file_selection: Option<&'a HashSet<String>>,
@@ -99,6 +101,7 @@ impl<'a, S> ScanFileStream<'a, S> {
             engine,
             table_root: scan.table_root().clone(),
             kernel_scan: scan.inner().clone(),
+            stats_projection: scan.stats_materialization().stats_projection().clone(),
             stream,
             scan_config,
             file_selection,
@@ -170,10 +173,7 @@ where
                 let scan_files =
                     filter_record_batch(&batch, &BooleanArray::from(selection_vector))?;
 
-                let stats_projection = match StatsProjection::for_scan(this.kernel_scan.as_ref()) {
-                    Ok(projection) => projection,
-                    Err(err) => return Poll::Ready(Some(Err(err))),
-                };
+                let stats_projection = &*this.stats_projection;
                 let snapshot = this.kernel_scan.snapshot();
                 let stats_schema = match stats_projection.stats_schema(snapshot) {
                     Ok(schema) => schema,
@@ -188,7 +188,7 @@ where
                     this.kernel_scan,
                     this.scan_config,
                     parsed_stats,
-                    &stats_projection,
+                    stats_projection,
                 );
 
                 Poll::Ready(Some(Ok(ctx
@@ -213,15 +213,10 @@ where
     }
 }
 
-/// Extracts DataFusion statistics from parsed file metadata.
-///
-/// Convert Delta Kernel file statistics into DataFusion [`Statistics`].
-///
-/// Only statistics for predicate columns are extracted.
+/// Converts parsed Delta file metadata into DataFusion [`Statistics`] for a scan request.
 ///
 /// The scan provides schema and predicate information. `parsed_stats` contains parsed
-/// statistics for all files. `stats_projection` names the stats fields materialized
-/// for this scan.
+/// statistics for all files. `stats_projection` lists the fields to include in this scan.
 ///
 /// # Returns
 ///
@@ -239,7 +234,9 @@ fn extract_file_statistics(
                 .num_records()
                 .map(Precision::Exact)
                 .unwrap_or(Precision::Absent);
-            let total_byte_size = Precision::Exact(view.size() as usize);
+            let total_byte_size = usize::try_from(view.size())
+                .map(Precision::Inexact)
+                .unwrap_or(Precision::Absent);
 
             let null_counts = extract_struct(view.null_counts());
             let max_values = extract_struct(view.max_values());
@@ -253,7 +250,7 @@ fn extract_file_statistics(
                         stats_projection.emits_top_level_column_stats(f.name());
 
                     if !should_extract_stats {
-                        // Return unknown statistics for non-predicate columns
+                        // Fill each column outside the request with absent statistics.
                         return ColumnStatistics {
                             null_count: Precision::Absent,
                             max_value: Precision::Absent,
@@ -264,15 +261,15 @@ fn extract_file_statistics(
                         };
                     }
 
-                    // Extract statistics for predicate columns
+                    // Read each statistic named in the request.
                     let null_count = if let Some(field_index) =
                         null_counts.as_ref().and_then(|v| v.index_of(f.name()))
                     {
                         null_counts
                             .as_ref()
                             .map(|v| match v.values()[field_index] {
-                                Scalar::Integer(int_val) => Precision::Exact(int_val as usize),
-                                Scalar::Long(long_val) => Precision::Exact(long_val as usize),
+                                Scalar::Integer(int_val) => exact_count(int_val.into(), &num_rows),
+                                Scalar::Long(long_val) => exact_count(long_val, &num_rows),
                                 _ => Precision::Absent,
                             })
                             .unwrap_or_default()
@@ -285,14 +282,17 @@ fn extract_file_statistics(
                     let min_value =
                         physical_precision(extract_precision(&min_values, f.name()), scan_config);
 
-                    ColumnStatistics {
-                        null_count,
-                        max_value,
-                        min_value,
-                        sum_value: Precision::Absent,
-                        distinct_count: Precision::Absent,
-                        byte_size: Precision::Absent,
-                    }
+                    sanitize_column_statistics(
+                        ColumnStatistics {
+                            null_count,
+                            max_value,
+                            min_value,
+                            sum_value: Precision::Absent,
+                            distinct_count: Precision::Absent,
+                            byte_size: Precision::Absent,
+                        },
+                        &num_rows,
+                    )
                 })
                 .collect_vec();
 
@@ -327,13 +327,44 @@ fn extract_precision(data: &Option<StructData>, name: impl AsRef<str>) -> Precis
     if let Some(field_index) = data.as_ref().and_then(|v| v.index_of(name.as_ref())) {
         data.as_ref()
             .map(|v| match to_datafusion_scalar(&v.values()[field_index]) {
-                Ok(df) => Precision::Exact(df),
+                Ok(df) if !df.is_null() => Precision::Exact(df),
                 _ => Precision::Absent,
             })
             .unwrap_or_default()
     } else {
         Precision::Absent
     }
+}
+
+fn exact_count(value: i64, num_rows: &Precision<usize>) -> Precision<usize> {
+    let Ok(value) = usize::try_from(value) else {
+        return Precision::Absent;
+    };
+    if matches!(num_rows, Precision::Exact(rows) if value > *rows) {
+        return Precision::Absent;
+    }
+    Precision::Exact(value)
+}
+
+fn sanitize_column_statistics(
+    mut statistics: ColumnStatistics,
+    num_rows: &Precision<usize>,
+) -> ColumnStatistics {
+    let all_rows_are_null = matches!(
+        (&statistics.null_count, num_rows),
+        (Precision::Exact(nulls), Precision::Exact(rows)) if nulls == rows
+    );
+    let bounds_are_inverted = matches!(
+        (&statistics.min_value, &statistics.max_value),
+        (Precision::Exact(min), Precision::Exact(max))
+            if min.partial_cmp(max) == Some(std::cmp::Ordering::Greater)
+    );
+
+    if all_rows_are_null || bounds_are_inverted {
+        statistics.min_value = Precision::Absent;
+        statistics.max_value = Precision::Absent;
+    }
+    statistics
 }
 
 fn extract_struct(scalar: Option<Scalar>) -> Option<StructData> {
@@ -485,12 +516,21 @@ fn visit_scan_file(ctx: &mut ScanContext, scan_file: ScanFile) {
             return;
         }
     };
+    let size = match u64::try_from(scan_file.size) {
+        Ok(size) => size,
+        Err(_) => {
+            ctx.errs.add_error(DataFusionError::Plan(
+                "Delta Add action contains a negative file size".to_string(),
+            ));
+            return;
+        }
+    };
 
     ctx.files.push(ScanFileContextInner {
         dv_info: scan_file.dv_info,
         transform: scan_file.transform,
         file_url,
-        size: scan_file.size as u64,
+        size,
         num_records: scan_file.stats.map(|stats| stats.num_records),
     });
     ctx.count += 1;
@@ -500,10 +540,11 @@ fn visit_scan_file(ctx: &mut ScanContext, scan_file: ScanFile) {
 mod tests {
     use std::collections::HashMap;
 
+    use datafusion::common::{ColumnStatistics, ScalarValue, stats::Precision};
     use delta_kernel::scan::state::{DvInfo, ScanFile};
     use url::Url;
 
-    use super::{ScanContext, visit_scan_file};
+    use super::{ScanContext, exact_count, sanitize_column_statistics, visit_scan_file};
 
     fn scan_file(path: impl Into<String>) -> ScanFile {
         ScanFile {
@@ -535,5 +576,52 @@ mod tests {
             ctx.files[0].file_url.as_str(),
             "file:///tmp/delta/part-000.parquet"
         );
+    }
+
+    #[test]
+    fn test_scan_context_rejects_negative_file_size() {
+        let mut ctx = ScanContext::new(Url::parse("file:///tmp/delta/").unwrap());
+        let mut file = scan_file("part-000.parquet");
+        file.size = -1;
+
+        visit_scan_file(&mut ctx, file);
+
+        let error = match ctx.error_or() {
+            Ok(_) => panic!("negative file size must fail planning"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("negative file size"));
+    }
+
+    #[test]
+    fn exact_count_rejects_negative_overflowing_and_impossible_values() {
+        assert_eq!(exact_count(3, &Precision::Exact(5)), Precision::Exact(3));
+        assert_eq!(exact_count(-1, &Precision::Exact(5)), Precision::Absent);
+        assert_eq!(exact_count(6, &Precision::Exact(5)), Precision::Absent);
+        if usize::BITS < i64::BITS {
+            assert_eq!(exact_count(i64::MAX, &Precision::Absent), Precision::Absent);
+        }
+    }
+
+    #[test]
+    fn contradictory_bounds_are_not_reported_as_exact() {
+        let column_statistics = |null_count, min, max| ColumnStatistics {
+            null_count: Precision::Exact(null_count),
+            min_value: Precision::Exact(ScalarValue::Int64(Some(min))),
+            max_value: Precision::Exact(ScalarValue::Int64(Some(max))),
+            sum_value: Precision::Absent,
+            distinct_count: Precision::Absent,
+            byte_size: Precision::Absent,
+        };
+
+        let all_null = sanitize_column_statistics(column_statistics(2, 1, 2), &Precision::Exact(2));
+        assert_eq!(all_null.null_count, Precision::Exact(2));
+        assert_eq!(all_null.min_value, Precision::Absent);
+        assert_eq!(all_null.max_value, Precision::Absent);
+
+        let inverted = sanitize_column_statistics(column_statistics(0, 5, 1), &Precision::Exact(2));
+        assert_eq!(inverted.null_count, Precision::Exact(0));
+        assert_eq!(inverted.min_value, Precision::Absent);
+        assert_eq!(inverted.max_value, Precision::Absent);
     }
 }

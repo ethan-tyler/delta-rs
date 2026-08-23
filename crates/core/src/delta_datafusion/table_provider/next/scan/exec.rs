@@ -10,12 +10,13 @@ use std::task::{Context, Poll};
 
 use arrow::array::{RecordBatch, StringArray};
 use arrow::compute::filter_record_batch;
-use arrow::datatypes::{FieldRef, Schema, SchemaRef, UInt16Type};
+use arrow::datatypes::{DataType, FieldRef, Schema, SchemaRef, UInt16Type};
 use arrow_array::StringViewArray;
 use arrow_array::{Array, ArrayRef, BooleanArray, UInt64Array};
 use dashmap::DashMap;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::error::{DataFusionError, Result};
+use datafusion::common::stats::Precision;
 use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::common::{
     ColumnStatistics, HashMap, internal_datafusion_err, internal_err, plan_err,
@@ -46,6 +47,29 @@ use crate::kernel::arrow::engine_ext::ExpressionEvaluatorExt;
 
 const DELTA_MATERIALIZED_PUSHDOWN_SENTINEL: &str =
     "__delta_rs_unpushable_delta_materialized_filter";
+
+fn remap_column_statistics(
+    statistics: &ColumnStatistics,
+    source_type: &DataType,
+    output_type: &DataType,
+) -> ColumnStatistics {
+    if source_type == output_type {
+        return statistics.clone();
+    }
+
+    // A schema override leaves the null count valid. Statistics that depend on the source type may
+    // lose their meaning after the override. An Int64 bound cannot describe a Timestamp output. A
+    // lossy cast may change aggregate values and byte estimates. Keep the null count and discard
+    // the other values.
+    ColumnStatistics {
+        null_count: statistics.null_count,
+        max_value: Precision::Absent,
+        min_value: Precision::Absent,
+        sum_value: Precision::Absent,
+        distinct_count: Precision::Absent,
+        byte_size: Precision::Absent,
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct DvMaskResult {
@@ -238,7 +262,11 @@ impl DeltaScanExec {
 
             for field in self.schema().fields() {
                 if let Some(index) = get_index(field.name()) {
-                    new_stats.push(stats.column_statistics[index].clone());
+                    new_stats.push(remap_column_statistics(
+                        &stats.column_statistics[index],
+                        self.input.schema().field(index).data_type(),
+                        field.data_type(),
+                    ));
                 } else if let Some(part_stat) = self.partition_stats.get(field.name()) {
                     new_stats.push(part_stat.clone());
                 } else {
@@ -253,7 +281,11 @@ impl DeltaScanExec {
                     .physical_schema()
                     .field_with_index(field.name())
                 {
-                    new_stats.push(stats.column_statistics[index].clone());
+                    new_stats.push(remap_column_statistics(
+                        &stats.column_statistics[index],
+                        self.input.schema().field(index).data_type(),
+                        field.data_type(),
+                    ));
                 } else if let Some(part_stat) = self.partition_stats.get(field.name()) {
                     new_stats.push(part_stat.clone());
                 } else {
@@ -863,6 +895,35 @@ mod tests {
         },
         test_utils::{TestResult, TestTables, open_fs_path},
     };
+
+    #[test]
+    fn remap_statistics_drops_type_dependent_values_after_schema_override() {
+        let statistics = ColumnStatistics {
+            null_count: Precision::Exact(1),
+            max_value: Precision::Exact(ScalarValue::Int64(Some(5))),
+            min_value: Precision::Exact(ScalarValue::Int64(Some(1))),
+            sum_value: Precision::Exact(ScalarValue::Int64(Some(9))),
+            distinct_count: Precision::Exact(3),
+            byte_size: Precision::Exact(24),
+        };
+
+        assert_eq!(
+            remap_column_statistics(&statistics, &DataType::Int64, &DataType::Int64),
+            statistics
+        );
+
+        let remapped = remap_column_statistics(
+            &statistics,
+            &DataType::Int64,
+            &DataType::Timestamp(arrow_schema::TimeUnit::Millisecond, None),
+        );
+        assert_eq!(remapped.null_count, Precision::Exact(1));
+        assert_eq!(remapped.min_value, Precision::Absent);
+        assert_eq!(remapped.max_value, Precision::Absent);
+        assert_eq!(remapped.sum_value, Precision::Absent);
+        assert_eq!(remapped.distinct_count, Precision::Absent);
+        assert_eq!(remapped.byte_size, Precision::Absent);
+    }
 
     #[tokio::test]
     async fn test_scan_nested() -> TestResult {
@@ -1643,6 +1704,8 @@ mod tests {
 
         let downcast = scan.downcast_ref::<DeltaScanExec>();
         assert!(downcast.is_some(), "Expected DeltaScanExec for DV test");
+        let statistics = StatisticsContext::new().compute(scan.as_ref(), &StatisticsArgs::new())?;
+        assert_eq!(statistics.num_rows, Precision::Exact(1));
 
         let batches = collect(scan, session.task_ctx()).await?;
 

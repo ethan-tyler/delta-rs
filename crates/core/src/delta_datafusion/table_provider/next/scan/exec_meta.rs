@@ -1212,7 +1212,6 @@ mod tests {
                 .num_rows,
             Precision::Exact(20)
         );
-
         Ok(())
     }
 }

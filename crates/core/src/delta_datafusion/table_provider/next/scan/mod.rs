@@ -66,7 +66,9 @@ use url::Url;
 pub use self::exec::DeltaScanExec;
 use self::exec_meta::DeltaScanMetaExec;
 use self::expr_adapter::{DeltaPhysicalExprAdapterFactory, relax_schema_nested_nullability};
-pub(crate) use self::plan::{KernelScanPlan, ProjectedScanContract, supports_filters_pushdown};
+pub(crate) use self::plan::{
+    KernelScanPlan, ProjectedScanContract, RequestedStatisticsColumns, supports_filters_pushdown,
+};
 use self::replay::{ScanFileContext, ScanFileStream};
 use super::{FileSelection, ResolvedFileSelection};
 use crate::{
@@ -416,7 +418,15 @@ async fn get_data_scan_plan(
     // Create one `DataSourceExec` plan for each store.
     // Add a compact scan file id as a partition value for file correlation.
     // The exec maps that id back to the public file path only when the file column is projected.
-    let to_partitioned_file = |(file_index, f): (usize, ScanFileContext)| {
+    let to_partitioned_file = |(file_index, mut f): (usize, ScanFileContext)| {
+        let internal_file_id = compact_internal_file_id(file_index);
+        if let Some(selection) = dvs.get(&internal_file_id) {
+            apply_deletion_vector_to_statistics(
+                &mut f.stats,
+                selection.value(),
+                &internal_file_id,
+            )?;
+        }
         if let Some(part_stata) = &f.partitions {
             update_partition_stats(part_stata, &f.stats, &mut partition_stats)?;
         }
@@ -431,7 +441,7 @@ async fn get_data_scan_plan(
             version: None,
         }
         .into();
-        let file_value = wrap_file_id_value(compact_internal_file_id(file_index));
+        let file_value = wrap_file_id_value(internal_file_id);
         // NOTE: `PartitionedFile::with_statistics` appends exact stats for partition columns based
         // on `partition_values`, so partition values must be set first.
         partitioned_file.partition_values = vec![file_value.clone()];
@@ -488,19 +498,56 @@ async fn get_data_scan_plan(
     Ok(Arc::new(exec))
 }
 
+fn apply_deletion_vector_to_statistics(
+    statistics: &mut Statistics,
+    selection: &[bool],
+    file_id: &str,
+) -> Result<()> {
+    let deleted_rows = selection.iter().filter(|keep| !**keep).count();
+    let adjust = |row_count: usize| {
+        if selection.len() > row_count {
+            return plan_err!(
+                "Deletion vector length {} exceeds row count {} for file '{}'",
+                selection.len(),
+                row_count,
+                file_id
+            );
+        }
+        Ok(row_count - deleted_rows)
+    };
+    statistics.num_rows = match statistics.num_rows {
+        Precision::Exact(row_count) => Precision::Exact(adjust(row_count)?),
+        Precision::Inexact(row_count) => Precision::Inexact(adjust(row_count)?),
+        Precision::Absent => Precision::Absent,
+    };
+    if deleted_rows > 0 {
+        statistics.column_statistics = std::mem::take(&mut statistics.column_statistics)
+            .into_iter()
+            .map(ColumnStatistics::to_inexact)
+            .collect();
+    }
+    Ok(())
+}
+
 fn update_partition_stats(
     data: &StructData,
     stats: &Statistics,
     part_stats: &mut HashMap<String, ColumnStatistics>,
 ) -> Result<()> {
+    if matches!(stats.num_rows, Precision::Exact(0)) {
+        return Ok(());
+    }
+
     for (field, stat) in data.fields().iter().zip(data.values().iter()) {
         let (null_count, value) = if stat.is_null() {
             (stats.num_rows, Precision::Absent)
         } else {
-            (
-                Precision::Exact(0),
-                Precision::Exact(to_datafusion_scalar(stat)?),
-            )
+            let value = to_datafusion_scalar(stat)?;
+            let value = match stats.num_rows {
+                Precision::Exact(_) => Precision::Exact(value),
+                Precision::Inexact(_) | Precision::Absent => Precision::Inexact(value),
+            };
+            (Precision::Exact(0), value)
         };
         if let Some(part_stat) = part_stats.get_mut(field.name()) {
             part_stat.null_count = part_stat.null_count.add(&null_count);
@@ -868,9 +915,14 @@ mod tests {
     };
     use arrow_schema::{ArrowError, DataType, Field, Fields, Schema};
     use datafusion::{
+        common::ScalarValue,
         error::DataFusionError,
         physical_plan::collect,
         prelude::{col, lit},
+    };
+    use delta_kernel::{
+        expressions::{Scalar, StructData},
+        schema::{DataType as KernelDataType, StructField as KernelStructField},
     };
     use object_store::{ObjectStoreExt as _, memory::InMemory};
     use parquet::arrow::ArrowWriter;
@@ -900,6 +952,127 @@ mod tests {
         assert_eq!(groups.len(), 2);
         assert_eq!(groups[0].len(), MAX_PARTITION_DICT_CARDINALITY);
         assert_eq!(groups[1].len(), 1);
+    }
+
+    #[test]
+    fn deletion_vector_adjusts_file_statistics_precision() -> TestResult {
+        let mut statistics = Statistics {
+            num_rows: Precision::Exact(5),
+            total_byte_size: Precision::Exact(100),
+            column_statistics: vec![ColumnStatistics {
+                null_count: Precision::Exact(1),
+                max_value: Precision::Exact(ScalarValue::Int64(Some(5))),
+                min_value: Precision::Exact(ScalarValue::Int64(Some(1))),
+                sum_value: Precision::Exact(ScalarValue::Int64(Some(15))),
+                distinct_count: Precision::Exact(5),
+                byte_size: Precision::Exact(40),
+            }],
+        };
+
+        apply_deletion_vector_to_statistics(&mut statistics, &[true, false, true], "file-0")?;
+
+        assert_eq!(statistics.num_rows, Precision::Exact(4));
+        assert_eq!(statistics.total_byte_size, Precision::Exact(100));
+        let column = &statistics.column_statistics[0];
+        assert!(matches!(column.null_count, Precision::Inexact(1)));
+        assert!(matches!(column.min_value, Precision::Inexact(_)));
+        assert!(matches!(column.max_value, Precision::Inexact(_)));
+        assert!(matches!(column.sum_value, Precision::Inexact(_)));
+        assert!(matches!(column.distinct_count, Precision::Inexact(5)));
+        assert!(matches!(column.byte_size, Precision::Inexact(40)));
+        Ok(())
+    }
+
+    #[test]
+    fn deletion_vector_rejects_mask_longer_than_known_row_count() {
+        let mut statistics = Statistics {
+            num_rows: Precision::Inexact(1),
+            total_byte_size: Precision::Absent,
+            column_statistics: vec![],
+        };
+
+        let error = apply_deletion_vector_to_statistics(&mut statistics, &[true, false], "file-0")
+            .expect_err("oversized deletion vector must fail");
+        assert!(error.to_string().contains("exceeds row count"));
+    }
+
+    #[test]
+    fn partition_statistics_ignore_files_with_exactly_zero_live_rows() -> TestResult {
+        let partitions = StructData::try_new(
+            vec![KernelStructField::new(
+                "part",
+                KernelDataType::STRING,
+                false,
+            )],
+            vec![Scalar::String("deleted".to_string())],
+        )?;
+        let statistics = Statistics {
+            num_rows: Precision::Exact(0),
+            total_byte_size: Precision::Absent,
+            column_statistics: vec![],
+        };
+        let mut partition_statistics = HashMap::new();
+
+        update_partition_stats(&partitions, &statistics, &mut partition_statistics)?;
+
+        assert!(partition_statistics.is_empty());
+
+        let live_partitions = StructData::try_new(
+            vec![KernelStructField::new(
+                "part",
+                KernelDataType::STRING,
+                false,
+            )],
+            vec![Scalar::String("live".to_string())],
+        )?;
+        let live_statistics = Statistics {
+            num_rows: Precision::Exact(1),
+            total_byte_size: Precision::Absent,
+            column_statistics: vec![],
+        };
+        update_partition_stats(
+            &live_partitions,
+            &live_statistics,
+            &mut partition_statistics,
+        )?;
+        let part = partition_statistics
+            .get("part")
+            .expect("live partition stats");
+        assert_eq!(
+            part.min_value,
+            Precision::Exact(ScalarValue::Utf8(Some("live".to_string())))
+        );
+        assert_eq!(part.max_value, part.min_value);
+        Ok(())
+    }
+
+    #[test]
+    fn partition_statistics_do_not_upgrade_uncertain_files_to_exact_bounds() -> TestResult {
+        let partitions = StructData::try_new(
+            vec![KernelStructField::new(
+                "part",
+                KernelDataType::STRING,
+                false,
+            )],
+            vec![Scalar::String("maybe-live".to_string())],
+        )?;
+        let statistics = Statistics {
+            num_rows: Precision::Inexact(1),
+            total_byte_size: Precision::Absent,
+            column_statistics: vec![],
+        };
+        let mut partition_statistics = HashMap::new();
+
+        update_partition_stats(&partitions, &statistics, &mut partition_statistics)?;
+
+        let part = partition_statistics.get("part").expect("partition stats");
+        assert_eq!(part.null_count, Precision::Exact(0));
+        assert_eq!(
+            part.min_value,
+            Precision::Inexact(ScalarValue::Utf8(Some("maybe-live".to_string())))
+        );
+        assert_eq!(part.max_value, part.min_value);
+        Ok(())
     }
 
     #[tokio::test]
