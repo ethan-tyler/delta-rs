@@ -270,9 +270,6 @@ class DeltaTable:
             str(table_uri),
             version=version,
             storage_options=storage_options,
-            without_files=without_files,
-            log_buffer_size=log_buffer_size,
-            skip_stats=skip_stats,
         )
 
     @property
@@ -283,7 +280,11 @@ class DeltaTable:
             DeprecationWarning,
             stacklevel=2,
         )
-        return DeltaTableConfig(*self._table.table_config())
+        return DeltaTableConfig(
+            without_files=False,
+            log_buffer_size=0,
+            skip_stats=False,
+        )
 
     @staticmethod
     def is_deltatable(
